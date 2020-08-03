@@ -7,19 +7,6 @@
 
 import Foundation
 
-//protocol ASN1Template
-//{
-//	var kind: UInt32 { get }
-//	var sub: ASN1Template? { get }
-//}
-
-func a(t: ASN1Template)
-{
-	
-}
-
-
-
 public class ASN1Template
 {
 	var expectedTags: [UInt32] = []

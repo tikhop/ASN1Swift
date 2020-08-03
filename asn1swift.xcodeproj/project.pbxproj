@@ -13,8 +13,7 @@
 		479B0EDE24CF37A20022ECE6 /* asn1swift.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 479B0ED424CF37A20022ECE6 /* asn1swift.framework */; };
 		479B0EE324CF37A20022ECE6 /* asn1swiftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 479B0EE224CF37A20022ECE6 /* asn1swiftTests.swift */; };
 		479B0EE524CF37A20022ECE6 /* asn1swift.h in Headers */ = {isa = PBXBuildFile; fileRef = 479B0ED724CF37A20022ECE6 /* asn1swift.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		479B0EF124CF38310022ECE6 /* Main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 479B0EF024CF38310022ECE6 /* Main.swift */; };
-		479B0EF224CF39450022ECE6 /* Main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 479B0EF024CF38310022ECE6 /* Main.swift */; };
+		479B0EF224CF39450022ECE6 /* CustomObjects.swift in Sources */ = {isa = PBXBuildFile; fileRef = 479B0EF024CF38310022ECE6 /* CustomObjects.swift */; };
 		479B0EF624D067AB0022ECE6 /* ASN1Serialization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 479B0EF524D067AB0022ECE6 /* ASN1Serialization.swift */; };
 		479B0F1124D1EA290022ECE6 /* ASN1Templates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 479B0F1024D1EA290022ECE6 /* ASN1Templates.swift */; };
 		479B0F1324D1EB370022ECE6 /* ASN1Coder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 479B0F1224D1EB370022ECE6 /* ASN1Coder.swift */; };
@@ -49,7 +48,7 @@
 		479B0EDD24CF37A20022ECE6 /* asn1swiftTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = asn1swiftTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		479B0EE224CF37A20022ECE6 /* asn1swiftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = asn1swiftTests.swift; sourceTree = "<group>"; };
 		479B0EE424CF37A20022ECE6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		479B0EF024CF38310022ECE6 /* Main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Main.swift; sourceTree = "<group>"; };
+		479B0EF024CF38310022ECE6 /* CustomObjects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomObjects.swift; sourceTree = "<group>"; };
 		479B0EF324CF67470022ECE6 /* ASN1Types.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ASN1Types.swift; sourceTree = "<group>"; };
 		479B0EF524D067AB0022ECE6 /* ASN1Serialization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ASN1Serialization.swift; sourceTree = "<group>"; };
 		479B0F1024D1EA290022ECE6 /* ASN1Templates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ASN1Templates.swift; sourceTree = "<group>"; };
@@ -112,6 +111,7 @@
 			children = (
 				479B0EE224CF37A20022ECE6 /* asn1swiftTests.swift */,
 				479B0EE424CF37A20022ECE6 /* Info.plist */,
+				479B0EF024CF38310022ECE6 /* CustomObjects.swift */,
 				47EC2CBC24D7937600D8AA59 /* ReceiptData.swift */,
 				4773521324D8A2C700CF76AC /* NewReceipt.swift */,
 				4773521124D8A21500CF76AC /* LegacyReceipt.swift */,
@@ -122,7 +122,6 @@
 		479B0EEF24CF38060022ECE6 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
-				479B0EF024CF38310022ECE6 /* Main.swift */,
 				479B0EF324CF67470022ECE6 /* ASN1Types.swift */,
 				479B0EF524D067AB0022ECE6 /* ASN1Serialization.swift */,
 				479B0F1024D1EA290022ECE6 /* ASN1Templates.swift */,
@@ -245,7 +244,6 @@
 			files = (
 				479B0F1124D1EA290022ECE6 /* ASN1Templates.swift in Sources */,
 				479B0F1624D1F7940022ECE6 /* ASN1Decoder.swift in Sources */,
-				479B0EF124CF38310022ECE6 /* Main.swift in Sources */,
 				479B0F1324D1EB370022ECE6 /* ASN1Coder.swift in Sources */,
 				479B0F1424D1EB9E0022ECE6 /* ASN1Types.swift in Sources */,
 				47AA593024D38A0600064DF7 /* DecodingError+Extensions.swift in Sources */,
@@ -259,7 +257,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				47AA593224D3A0F400064DF7 /* ASN1Templates.swift in Sources */,
-				479B0EF224CF39450022ECE6 /* Main.swift in Sources */,
+				479B0EF224CF39450022ECE6 /* CustomObjects.swift in Sources */,
 				47AA592D24D3504100064DF7 /* ASN1Coder.swift in Sources */,
 				47EC2CBD24D7937600D8AA59 /* ReceiptData.swift in Sources */,
 				47788BC824D640CA009C7D3D /* ASN1Decoder+Decode.swift in Sources */,

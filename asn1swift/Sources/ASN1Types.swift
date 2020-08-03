@@ -7,22 +7,6 @@
 
 import Foundation
 
-public struct ASN1Item
-{
-	private var rawData: Data
-}
-
-public struct ASN1SkippedItem: Decodable
-{
-	private var rawData: Data
-	
-	var template: ASN1Template { .universal(0) }
-}
-
-struct ASN1Kind: OptionSet
-{
-	public let rawValue: UInt32
-}
 
 public typealias ASN1SkippedField = Data
 public typealias ASN1Tag = UInt8
@@ -32,8 +16,7 @@ extension ASN1Tag
 	var unknown: ASN1Tag { 0 }
 }
 
-
-public enum ASN1Identifier
+public struct ASN1Identifier
 {
 	public struct Modifiers
 	{
@@ -110,144 +93,4 @@ public enum ASN1Identifier
 		case contextSpecific = 0x02 //2
 		case `private` = 0x03 //3
 	}
-	
-//	public enum Tag: UInt8, RawRepresentable
-//	{
-//		case endOfContent = 0x00
-//		case boolean = 0x01
-//		case integer = 0x02
-//		case bitString = 0x03
-//		case octetString = 0x04
-//		case null = 0x05
-//		case objectIdentifier = 0x06
-//		case objectDescriptor = 0x07
-//		case external = 0x08
-//		case real = 0x09
-//		case enumerated = 0x0a
-//		case embeddedPdv = 0x0b
-//		case utf8String = 0x0c
-//		case relativeOid = 0x0d
-//		case sequence = 0x10
-//		case set = 0x11
-//		case numericString = 0x12
-//		case printableString = 0x13
-//		case t61String = 0x14
-//		case videotexString = 0x15
-//		case ia5String = 0x16
-//		case utcTime = 0x17
-//		case generalizedTime = 0x18
-//		case graphicString = 0x19
-//		case visibleString = 0x1a
-//		case generalString = 0x1b
-//		case universalString = 0x1c
-//		case characterString = 0x1d
-//		case bmpString = 0x1e
-//		case high = 0x1f // High tag number
-//		case unknown = 126
-//	}
 }
-
-//extension ASN1Identifier.Tag
-//{
-//	var uint32: UInt32
-//	{
-//		return UInt32(self)
-//	}
-//}
-//
-//struct ASN1Object
-//{
-//	let identifier: Identifier
-//	var length: Length
-//	
-//	var rawData: Data
-//	var bytesCount: Int
-//	
-//	enum Length
-//	{
-//		case short(value: Int)
-//		case long(length: Int, value: Int)
-//	}
-//	
-//	struct Identifier
-//	{
-//		public enum Class: UInt8
-//		{
-//			case universal = 0
-//			case application = 1
-//			case contextSpecific = 2
-//			case `private` = 3
-//		}
-//		
-//		public enum Tag: UInt8
-//		{
-//			case boolean = 0x01
-//			case integer = 0x02
-//			case bitString = 0x03
-//			case octetString = 0x04
-//			case null = 0x05
-//			case objectIdentifier = 0x06
-//			case objectDescriptor = 0x07
-//			case external = 0x08
-//			case real = 0x09
-//			case enumerated = 0x0a
-//			case embeddedPdv = 0x0b
-//			case utf8String = 0x0c
-//			case relativeOid = 0x0d
-//			case sequence = 0x10
-//			case set = 0x11
-//			case numericString = 0x12
-//			case printableString = 0x13
-//			case t61String = 0x14
-//			case videotexString = 0x15
-//			case ia5String = 0x16
-//			case utcTime = 0x17
-//			case generalizedTime = 0x18
-//			case graphicString = 0x19
-//			case visibleString = 0x1a
-//			case generalString = 0x1b
-//			case universalString = 0x1c
-//			case characterString = 0x1d
-//			case bmpString = 0x1e
-//			case high = 0x1f // High tag number
-//			case unknown = 126
-//		}
-//		
-//		public enum EncodingType: UInt8
-//		{
-//			case primitive = 0
-//			case constructed = 1
-//		}
-//		
-//		let `class`: Class
-//		let encodingType: EncodingType
-//		var tagNumber: UInt8
-//		
-//		var type: Tag { return Type(rawValue: tagNumber) ?? .unknown }
-//		
-//		let raw: UInt8
-//		
-//		init(raw: UInt8) throws
-//		{
-//			self.raw = raw
-//			self.tagNumber = raw & 0b11111
-//			
-//			guard let c = Class(rawValue: (raw >> 6) & 0b11),
-//				  let e = EncodingType(rawValue: (raw >> 5) & 0b1) else
-//			{
-//				throw ASN1Error.initializationFailed(reason: .dataIsInvalid)
-//			}
-//			
-//			self.class = c
-//			self.encodingType = e
-//		}
-//
-//		init(raw: UInt8, tagNumber: UInt8, class: Class, encodingType: EncodingType)
-//		{
-//			self.raw = raw
-//			self.tagNumber = tagNumber
-//			self.class = `class`
-//			self.encodingType = encodingType
-//		}
-//	}
-//}
