@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import ASN1Swift
 
 struct DecodedStruct: ASN1Decodable
 {

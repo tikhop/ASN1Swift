@@ -16,19 +16,19 @@ public class ASN1Template
 		expectedTags.append(kind)
 	}
 	
-	func implicit(tag: UInt8) -> ASN1Template
+	public func implicit(tag: UInt8) -> ASN1Template
 	{
 		return self
 	}
 	
-	func explicit(tag: UInt8) -> ASN1Template
+	public func explicit(tag: UInt8) -> ASN1Template
 	{
 		expectedTags.append(UInt32(tag))
 		
 		return self
 	}
 	
-	func constructed() -> ASN1Template
+	public func constructed() -> ASN1Template
 	{
 		if expectedTags.isEmpty
 		{

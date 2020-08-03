@@ -15,7 +15,7 @@ public protocol ASN1Decodable: Decodable
 	static var template: ASN1Template { get }
 }
 
-protocol ASN1CodingKey: CodingKey
+public protocol ASN1CodingKey: CodingKey
 {
 	var template: ASN1Template { get }
 }
