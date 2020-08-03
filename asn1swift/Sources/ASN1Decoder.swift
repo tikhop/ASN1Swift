@@ -35,6 +35,7 @@ open class ASN1Decoder
 		let opt = EncodingOptions()
 		let decoder = _ASN1Decoder(referencing: _ASN1Decoder.State(data: data, template: t), options: opt)
 		
+		
 		guard let value = try decoder.unbox(data, as: type) else
 		{
 			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: [], debugDescription: "The given data did not contain a top-level value."))
@@ -64,6 +65,10 @@ private struct ASN1DecodingStorage
 		return self.containers.count
 	}
 	
+	var isTop: Bool
+	{
+		return count == 1
+	}
 	var current: _ASN1Decoder.State
 	{
 		precondition(!self.containers.isEmpty, "Empty container stack.")
@@ -223,7 +228,7 @@ extension _ASN1Decoder
 		
 		for (tagNo, _tag) in expectedTags.enumerated()
 		{
-			expectEOCTerminators = 0
+			//expectEOCTerminators = 0
 			
 			var t = _tag
 			let tag = withUnsafePointer(to: &t) { (p) -> UInt8 in
@@ -246,11 +251,6 @@ extension _ASN1Decoder
 				assertionFailure("Unexpected tag. Inappropriate.") // TODO: throw
 			}
 			
-//			if tagNo < expectedTags.count - 1 && !tlvConstr
-//			{
-//				assertionFailure("We have more tags, but curren one isn't constructed") // TODO: throw
-//			}
-			
 			lenOfLen = fetchLength(from: data.advanced(by: tagLen), isConstructed: tlvConstr, rLen: &tlvLen)
 			
 			if tlvLen == -1 // Indefinite length.
@@ -260,37 +260,15 @@ extension _ASN1Decoder
 				if calculatedLen > 0
 				{
 					tlvLen = calculatedLen// - 2 // remove two EOC bytes
-					expectEOCTerminators = 2
+					expectEOCTerminators = 1
 				}else{
 					assertionFailure("Unexpected indefinite length in a chain of definite lengths") // TODO: throw
-				}
-				
-				
-				
-//				if limitLen == -1
-//				{
-//					expectEOCTerminators += 1
-//				} else {
-//					assertionFailure("Unexpected indefinite length in a chain of definite lengths") // TODO: throw
-//					return -1
-//
-//				}
-//
-//				let tlLenght = tagLen + lenOfLen
-//				data = data.advanced(by: tlLenght)
-//				consumedMyself += tlLenght
-//				continue;
-			}else{
-				if expectEOCTerminators != 0
-				{
-					assertionFailure("Unexpected indefinite length in a chain of definite lengths") // TODO: throw
-					return -1
 				}
 			}
 			
 			if limitLen == -1
 			{
-				limitLen  = tlvLen + tagLen + lenOfLen
+				limitLen  = tlvLen + tagLen + lenOfLen + expectEOCTerminators
 				
 				if limitLen < 0
 				{
@@ -299,6 +277,8 @@ extension _ASN1Decoder
 				}
 
 			}
+			
+			// Better to keep this but the problem that we can't get outter expectEOCTerminators, pass state maybe
 //			else if limitLen != tlvLen + tagLen + lenOfLen + expectEOCTerminators
 //			{
 //				/*
@@ -312,12 +292,12 @@ extension _ASN1Decoder
 			data = data.advanced(by: tagLen + lenOfLen).prefix(tlvLen)
 			consumedMyself += (tagLen + lenOfLen)
 			
-			limitLen -= (tagLen + lenOfLen) // + expectEOCTerminators)
+			limitLen -= (tagLen + lenOfLen + expectEOCTerminators)
 
 			step += 1
 		}
 				
-		lastTlvLength = tlvLen + expectEOCTerminators
+		lastTlvLength = tlvLen + (expectEOCTerminators << 1)
 		return consumedMyself
 	}
 	
@@ -328,18 +308,14 @@ extension _ASN1Decoder
 			return 0
 		}
 		
-		var rawTag: UInt8 = 0xa0 //firstByte
+		var rawTag: UInt8 = firstByte
 		let rawTagClass: UInt8 = rawTag >> 6
 		
 		rawTag &= ASN1Identifier.Tag.highTag
 		
 		if rawTag != ASN1Identifier.Tag.highTag
 		{
-			/*
-			* Simple form: everything encoded in a single octet.
-			* Tag Class is encoded using two least significant bits.
-			*/
-			rTag = firstByte //(rawTag << 2) | rawTagClass;
+			rTag = firstByte
 			return 1;
 		}
 		
@@ -691,7 +667,7 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContaine
 		let entry = self.container.data
 		var c: Int = 0
 		let data = self.decoder.extractValue(from: entry, with: k.template.expectedTags, consumed: &c)
-		self.container.data = entry.advanced(by: c)
+		self.container.data = c >= entry.count ? Data() : entry.advanced(by: c)
 		
 		guard let value = try self.decoder.unbox(data, as: Int.self) else {
 			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Expected \(type) value but found null instead."))
@@ -1376,7 +1352,14 @@ extension _ASN1Decoder
 		} else if type == Decimal.self || type == NSDecimalNumber.self {
 			return try self.unbox(value, as: Decimal.self)
 		} else {
-			if let t = type as? ASN1Decodable.Type
+			if storage.isTop
+			{
+				let s = _ASN1Decoder.State(data: value, template: storage.current.template)
+				self.storage.push(container: s)
+				defer { self.storage.popContainer() }
+				
+				return try type.init(from: self)
+			}else if let t = type as? ASN1Decodable.Type
 			{
 				let s = _ASN1Decoder.State(data: value, template: t.template)
 				self.storage.push(container: s)

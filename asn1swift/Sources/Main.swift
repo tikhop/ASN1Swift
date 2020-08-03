@@ -42,7 +42,7 @@ struct DecodedStruct: ASN1Decodable
 {
 	static var template: ASN1Template
 	{
-		return ASN1Template.universal(16).constructed()
+		return .universal(0x30)
 	}
 	
 	var a: Int
