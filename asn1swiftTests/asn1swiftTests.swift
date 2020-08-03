@@ -18,10 +18,26 @@ class asn1swiftTests: XCTestCase {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
 
-	func testDecoding_pkcs7() throws
-	{	
+	func testDecoding_newInAppReceipt() throws
+	{
 		let asn1Decoder = ASN1Decoder()
-		let r = try! asn1Decoder.decode(PKCS7.self, from: receipt)
+		let r = try! asn1Decoder.decode(NewReceipt.self, from: newReceipt)
+		print(r)
+		//XCTAssert(r.a == 0xa0)
+	}
+
+	func testDecoding_dataWithIndefiniteLength() throws
+	{
+		let asn1Decoder = ASN1Decoder()
+		let r = try! asn1Decoder.decode(IndefiniteLengthContainer.self, from: Data([0x30, 0x80, 0x02, 0x01, 0x04, 0xa0, 0x80, 0x30, 0x80, 0x02, 0x01, 0x0a, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]))
+		print(r)
+		//XCTAssert(r.a == 0xa0)
+	}
+
+	func testDecoding_pkcs7() throws
+	{
+		let asn1Decoder = ASN1Decoder()
+		let r = try! asn1Decoder.decode(LegacyReceipt.self, from: receipt)
 		print(r)
 		//XCTAssert(r.a == 0xa0)
 	}

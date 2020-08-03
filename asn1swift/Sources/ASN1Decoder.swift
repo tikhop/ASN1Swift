@@ -20,13 +20,13 @@ open class ASN1Decoder
 	
 	// MARK: - Decoding Values
 	
-	/// Decodes a top-level value of the given type from the given JSON representation.
+	/// Decodes a top-level value of the given type from the given ASN1 representation.
 	///
 	/// - parameter type: The type of the value to decode.
 	/// - parameter data: The data to decode from.
-	/// - parameter options: // TODO
+	/// - parameter template: // TODO
 	/// - returns: A value of the requested type.
-	/// - throws: `DecodingError.dataCorrupted` if values requested from the payload are corrupted, or if the given data is not valid JSON.
+	/// - throws: `DecodingError.dataCorrupted` if values requested from the payload are corrupted, or if the given data is not valid ASN1.
 	/// - throws: An error if any value throws an error during decoding.
 	open func decode<T : ASN1Decodable>(_ type: T.Type, from data: Data, template: ASN1Template? = nil) throws -> T
 	{
@@ -49,7 +49,7 @@ private struct ASN1DecodingStorage
 	// MARK: Properties
 	
 	/// The container stack.
-	/// Elements may be any one of the JSON types (NSNull, NSNumber, String, Array, [String : Any]).
+	/// Elements may be any one of the ASN1 types (NSNull, NSNumber, String, Array, [String : Any]).
 	private(set) var containers: [_ASN1Decoder.State] = []
 	
 	// MARK: - Initialization
@@ -201,7 +201,8 @@ extension _ASN1Decoder
 		var len: Int = 0
 		let cons = checkTags(from: data, with: expectedTags, lastTlvLength: &len)
 		consumed = cons + len
-		return data.advanced(by: cons).prefix(len)
+		let d = data.advanced(by: cons).prefix(len)
+		return d
 		
 	}
 	
@@ -216,11 +217,14 @@ extension _ASN1Decoder
 		var limitLen: Int = -1
 		var expectEOCTerminators: Int = 0
 		
+		var rawData: Data = data
 		var data: Data = data
 		var step: Int = 0
 		
 		for (tagNo, _tag) in expectedTags.enumerated()
 		{
+			expectEOCTerminators = 0
+			
 			var t = _tag
 			let tag = withUnsafePointer(to: &t) { (p) -> UInt8 in
 				return p.withMemoryRebound(to: UInt8.self, capacity: MemoryLayout<UInt8>.size) { p in
@@ -251,18 +255,31 @@ extension _ASN1Decoder
 			
 			if tlvLen == -1 // Indefinite length.
 			{
-				if limitLen == -1
+				let calculatedLen = calculateLength(from: data.advanced(by: tagLen), isConstructed: tlvConstr) - lenOfLen
+				
+				if calculatedLen > 0
 				{
-					expectEOCTerminators += 1
-				} else {
+					tlvLen = calculatedLen// - 2 // remove two EOC bytes
+					expectEOCTerminators = 2
+				}else{
 					assertionFailure("Unexpected indefinite length in a chain of definite lengths") // TODO: throw
-					return -1
-					
 				}
 				
-				data = data.advanced(by: tagLen + lenOfLen)
-				consumedMyself += (tagLen + lenOfLen)
-				continue;
+				
+				
+//				if limitLen == -1
+//				{
+//					expectEOCTerminators += 1
+//				} else {
+//					assertionFailure("Unexpected indefinite length in a chain of definite lengths") // TODO: throw
+//					return -1
+//
+//				}
+//
+//				let tlLenght = tagLen + lenOfLen
+//				data = data.advanced(by: tlLenght)
+//				consumedMyself += tlLenght
+//				continue;
 			}else{
 				if expectEOCTerminators != 0
 				{
@@ -281,25 +298,26 @@ extension _ASN1Decoder
 					return -1
 				}
 
-			} else if limitLen != tlvLen + tagLen + lenOfLen
-			{
-				/*
-				* Inner TLV specifies length which is inconsistent
-				* with the outer TLV's length value.
-				*/
-				assertionFailure("Outer TLV is \(limitLen) and inner is \(tlvLen)") // TODO: throw
-				return -1
 			}
+//			else if limitLen != tlvLen + tagLen + lenOfLen + expectEOCTerminators
+//			{
+//				/*
+//				* Inner TLV specifies length which is inconsistent
+//				* with the outer TLV's length value.
+//				*/
+//				assertionFailure("Outer TLV is \(limitLen) and inner is \(tlvLen)") // TODO: throw
+//				return -1
+//			}
 			
-			data = data.advanced(by: tagLen + lenOfLen)
+			data = data.advanced(by: tagLen + lenOfLen).prefix(tlvLen)
 			consumedMyself += (tagLen + lenOfLen)
 			
-			limitLen -= (tagLen + lenOfLen)
+			limitLen -= (tagLen + lenOfLen) // + expectEOCTerminators)
 
 			step += 1
 		}
 				
-		lastTlvLength = tlvLen
+		lastTlvLength = tlvLen + expectEOCTerminators
 		return consumedMyself
 	}
 	
@@ -358,11 +376,6 @@ extension _ASN1Decoder
 	
 	func fetchLength(from data: Data, isConstructed: Bool, rLen: inout Int) -> ASN1DecoderConsumedValue
 	{
-		if data.isEmpty
-		{
-			assertionFailure("Empty data")
-		}
-		
 		guard var oct = data.first else
 		{
 			assertionFailure("Empty data")
@@ -377,8 +390,9 @@ extension _ASN1Decoder
 			var len: Int = 0
 			
 			
-			if isConstructed && oct == 0x80
+			if isConstructed && oct == 0x80 // Indefinite length
 			{
+				
 				rLen = Int(-1)
 				return 1
 			}
@@ -395,10 +409,7 @@ extension _ASN1Decoder
 			var skipped: Int = 1
 			for b in d
 			{
-				if oct == 0
-				{
-					break
-				}
+				if oct == 0 { break }
 				
 				skipped += 1
 				
@@ -425,6 +436,64 @@ extension _ASN1Decoder
 			assertionFailure("Not enought data")
 			return -1
 		}
+	}
+	
+	func calculateLength(from data: Data, isConstructed: Bool) -> Int
+	{
+		var rawData: Data = data
+		var data: Data = data
+		var vlen: Int = 0 /* Length of V in TLV */
+		var tl: Int = 0 /* Length of L in TLV */
+		var ll: Int = 0 /* Length of L in TLV */
+		var skip: Int = 0
+		var size: Int = data.count
+		
+		ll = fetchLength(from: data, isConstructed: isConstructed, rLen: &vlen)
+		
+		if ll <= 0
+		{
+			return ll
+		}
+		
+		if(vlen >= 0)
+		{
+			skip = ll + vlen
+			
+			if skip > data.count
+			{
+				assertionFailure("Not enought data")
+				return 0
+			}
+			
+			return skip
+		}
+		
+		skip = ll
+		data = data.advanced(by: ll)
+		size -= 11
+		
+		while true {
+			var tag: ASN1Tag = 0
+			
+			tl = fetchTag(from: data, to: &tag)
+			if tl <= 0 { return tl }
+			
+			ll = calculateLength(from: data.advanced(by: tl), isConstructed: tlvConstructed(tag: tag))
+			if ll <= 0 { return ll }
+			
+			skip += tl + ll
+			
+			if(data[0] == 0 && data[1] == 0) { return skip }
+				
+			if skip == rawData.count { return skip }
+			
+			data = data.advanced(by: tl + ll)
+			size -= tl + ll
+			
+		}
+	
+		assertionFailure("Not supposed to be here")
+		return 0
 	}
 }
 
@@ -881,7 +950,10 @@ private struct ASN1UnkeyedDecodingContainer: UnkeyedDecodingContainer
 	
 	var count: Int?
 	
-	var isAtEnd: Bool { container.data.isEmpty }
+	var isAtEnd: Bool
+	{
+		return container.data.isEmpty || (container.data[0] == 0 && container.data[1] == 0)
+	}
 	
 	init(referencing decoder: _ASN1Decoder, wrapping container: _ASN1Decoder.State)
 	{
@@ -988,40 +1060,20 @@ private struct ASN1UnkeyedDecodingContainer: UnkeyedDecodingContainer
 	mutating func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type) throws -> KeyedDecodingContainer<NestedKey> where NestedKey : CodingKey
 	{
 		//TODO
+		assertionFailure("Hasn't implemented yet")
 		let container = ASN1KeyedDecodingContainer<NestedKey>(referencing: self.decoder, wrapping: self.container)
 		return KeyedDecodingContainer(container)
 	}
 	
 	mutating func nestedUnkeyedContainer() throws -> UnkeyedDecodingContainer
 	{
-		self.decoder.codingPath.append(ASN1Key(index: self.currentIndex))
-		defer { self.decoder.codingPath.removeLast() }
-		
-		guard !self.isAtEnd else {
-			throw DecodingError.valueNotFound(UnkeyedDecodingContainer.self,
-											  DecodingError.Context(codingPath: self.codingPath,
-																	debugDescription: "Cannot get nested keyed container -- unkeyed container is at end."))
-		}
-		
-		
-		self.currentIndex += 1
+		assertionFailure("Hasn't implemented yet")
 		return ASN1UnkeyedDecodingContainer(referencing: self.decoder, wrapping: self.container)
 	}
 	
-	mutating func superDecoder() throws -> Decoder {
-		//		self.decoder.codingPath.append(_JSONKey(index: self.currentIndex))
-		//		defer { self.decoder.codingPath.removeLast() }
-		//
-		//		guard !self.isAtEnd else {
-		//			throw DecodingError.valueNotFound(Decoder.self,
-		//											  DecodingError.Context(codingPath: self.codingPath,
-		//																	debugDescription: "Cannot get superDecoder() -- unkeyed container is at end."))
-		//		}
-		//
-		//		let value = self.container.data[self.currentIndex]
-		//		self.currentIndex += 1
-		//		return ASN1Decoder(with: value as! Data, at: self.decoder.codingPath, options: ASN1Decoder.EncodingOptions(kind: 0)) // TODO
-		
+	mutating func superDecoder() throws -> Decoder
+	{
+		assertionFailure("Hasn't implemented yet")
 		return _ASN1Decoder()
 	}
 }
@@ -1064,7 +1116,7 @@ extension _ASN1Decoder
 		
 		let int8 = number.int8Value
 		guard NSNumber(value: int8) == number else {
-			throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.codingPath, debugDescription: "Parsed JSON number <\(number)> does not fit in \(type)."))
+			throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.codingPath, debugDescription: "Parsed ASN1 number <\(number)> does not fit in \(type)."))
 		}
 		
 		return int8
@@ -1079,7 +1131,7 @@ extension _ASN1Decoder
 		
 		let int16 = number.int16Value
 		guard NSNumber(value: int16) == number else {
-			throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.codingPath, debugDescription: "Parsed JSON number <\(number)> does not fit in \(type)."))
+			throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.codingPath, debugDescription: "Parsed ASN1 number <\(number)> does not fit in \(type)."))
 		}
 		
 		return int16
@@ -1094,7 +1146,7 @@ extension _ASN1Decoder
 		
 		let int32 = number.int32Value
 		guard NSNumber(value: int32) == number else {
-			throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.codingPath, debugDescription: "Parsed JSON number <\(number)> does not fit in \(type)."))
+			throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.codingPath, debugDescription: "Parsed ASN1 number <\(number)> does not fit in \(type)."))
 		}
 		
 		return int32
@@ -1109,7 +1161,7 @@ extension _ASN1Decoder
 		
 		let int64 = number.int64Value
 		guard NSNumber(value: int64) == number else {
-			throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.codingPath, debugDescription: "Parsed JSON number <\(number)> does not fit in \(type)."))
+			throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.codingPath, debugDescription: "Parsed ASN1 number <\(number)> does not fit in \(type)."))
 		}
 		
 		return int64
@@ -1124,7 +1176,7 @@ extension _ASN1Decoder
 		
 		let uint = number.uintValue
 		guard NSNumber(value: uint) == number else {
-			throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.codingPath, debugDescription: "Parsed JSON number <\(number)> does not fit in \(type)."))
+			throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.codingPath, debugDescription: "Parsed ASN1 number <\(number)> does not fit in \(type)."))
 		}
 		
 		return uint
@@ -1139,7 +1191,7 @@ extension _ASN1Decoder
 		
 		let uint8 = number.uint8Value
 		guard NSNumber(value: uint8) == number else {
-			throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.codingPath, debugDescription: "Parsed JSON number <\(number)> does not fit in \(type)."))
+			throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.codingPath, debugDescription: "Parsed ASN1 number <\(number)> does not fit in \(type)."))
 		}
 		
 		return uint8
@@ -1154,7 +1206,7 @@ extension _ASN1Decoder
 		
 		let uint16 = number.uint16Value
 		guard NSNumber(value: uint16) == number else {
-			throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.codingPath, debugDescription: "Parsed JSON number <\(number)> does not fit in \(type)."))
+			throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.codingPath, debugDescription: "Parsed ASN1 number <\(number)> does not fit in \(type)."))
 		}
 		
 		return uint16
@@ -1169,7 +1221,7 @@ extension _ASN1Decoder
 		
 		let uint32 = number.uint32Value
 		guard NSNumber(value: uint32) == number else {
-			throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.codingPath, debugDescription: "Parsed JSON number <\(number)> does not fit in \(type)."))
+			throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.codingPath, debugDescription: "Parsed ASN1 number <\(number)> does not fit in \(type)."))
 		}
 		
 		return uint32
@@ -1184,7 +1236,7 @@ extension _ASN1Decoder
 		
 		let uint64 = number.uint64Value
 		guard NSNumber(value: uint64) == number else {
-			throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.codingPath, debugDescription: "Parsed JSON number <\(number)> does not fit in \(type)."))
+			throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.codingPath, debugDescription: "Parsed ASN1 number <\(number)> does not fit in \(type)."))
 		}
 		
 		return uint64
@@ -1202,7 +1254,7 @@ extension _ASN1Decoder
 			// * If it was a Double or Decimal, you will get back the nearest approximation if it will fit
 			let double = number.doubleValue
 			guard abs(double) <= Double(Float.greatestFiniteMagnitude) else {
-				throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.codingPath, debugDescription: "Parsed JSON number \(number) does not fit in \(type)."))
+				throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.codingPath, debugDescription: "Parsed ASN1 number \(number) does not fit in \(type)."))
 			}
 			
 			return Float(double)
