@@ -22,24 +22,22 @@ class asn1swiftTests: XCTestCase {
 	{
 		let asn1Decoder = ASN1Decoder()
 		let r = try! asn1Decoder.decode(NewReceipt.self, from: newReceipt)
-		print(r)
-		//XCTAssert(r.a == 0xa0)
+		XCTAssert(r.signedData.version == 1)
 	}
 
 	func testDecoding_dataWithIndefiniteLength() throws
 	{
 		let asn1Decoder = ASN1Decoder()
 		let r = try! asn1Decoder.decode(IndefiniteLengthContainer.self, from: Data([0x30, 0x80, 0x02, 0x01, 0x04, 0xa0, 0x80, 0x30, 0x80, 0x02, 0x01, 0x0a, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]))
-		print(r)
-		//XCTAssert(r.a == 0xa0)
+		XCTAssert(r.integer == 0x4)
+		XCTAssert(r.inner.integer == 0x0a)
 	}
 
 	func testDecoding_pkcs7() throws
 	{
 		let asn1Decoder = ASN1Decoder()
 		let r = try! asn1Decoder.decode(LegacyReceipt.self, from: receipt)
-		print(r)
-		//XCTAssert(r.a == 0xa0)
+		XCTAssert(r.signedData.version == 1)
 	}
 	
 	func testDecoding_sequence() throws
@@ -48,7 +46,6 @@ class asn1swiftTests: XCTestCase {
 
 		let asn1Decoder = ASN1Decoder()
 		let r = try! asn1Decoder.decode(DecodedStruct.self, from: Data(bytes))
-		print(r)
 		XCTAssert(r.a == 0xa0)
 	}
 	
@@ -59,7 +56,6 @@ class asn1swiftTests: XCTestCase {
 		let asn1Decoder = ASN1Decoder()
 		let t: ASN1Template = ASN1Template.contextSpecific(0).constructed().implicit(tag: ASN1Identifier.Tag.integer)
 		let integer = try! asn1Decoder.decode(Int.self, from: Data(bytes), template: t)
-		print(integer)
 		XCTAssert(integer == 0xa0)
 	}
 	
@@ -70,7 +66,6 @@ class asn1swiftTests: XCTestCase {
 		let asn1Decoder = ASN1Decoder()
 		let t: ASN1Template = ASN1Template.contextSpecific(0).constructed().explicit(tag: ASN1Identifier.Tag.integer)
 		let integer = try! asn1Decoder.decode(Int.self, from: Data(bytes), template: t)
-		print(integer)
 		XCTAssert(integer == 0xa0)
 	}
 	

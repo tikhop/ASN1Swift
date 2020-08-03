@@ -879,34 +879,34 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContaine
 		return value
 	}
 	
-	public func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type, forKey key: Key) throws -> KeyedDecodingContainer<NestedKey> {
-		self.decoder.codingPath.append(key)
-		defer { self.decoder.codingPath.removeLast() }
-		
+	public func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type, forKey key: Key) throws -> KeyedDecodingContainer<NestedKey>
+	{
+		assertionFailure("Hasn't implemented yet")
 		let container = ASN1KeyedDecodingContainer<NestedKey>(referencing: self.decoder, wrapping: self.container)
 		return KeyedDecodingContainer(container)
 	}
 	
-	public func nestedUnkeyedContainer(forKey key: Key) throws -> UnkeyedDecodingContainer {
-		self.decoder.codingPath.append(key)
-		defer { self.decoder.codingPath.removeLast() }
-		
-		
+	public func nestedUnkeyedContainer(forKey key: Key) throws -> UnkeyedDecodingContainer
+	{
+		assertionFailure("Hasn't implemented yet")
 		return ASN1UnkeyedDecodingContainer(referencing: self.decoder, wrapping: self.container)
 	}
 	
-	private func _superDecoder(forKey key: __owned CodingKey) throws -> Decoder {
-		self.decoder.codingPath.append(key)
-		defer { self.decoder.codingPath.removeLast() }
-		
+	private func _superDecoder(forKey key: __owned CodingKey) throws -> Decoder
+	{
+		assertionFailure("Hasn't implemented yet")
 		return _ASN1Decoder(referencing: self.container, at: self.decoder.codingPath, options: self.decoder.options)
 	}
 	
-	public func superDecoder() throws -> Decoder {
+	public func superDecoder() throws -> Decoder
+	{
+		assertionFailure("Hasn't implemented yet")
 		return try _superDecoder(forKey: ASN1Key.super)
 	}
 	
-	public func superDecoder(forKey key: Key) throws -> Decoder {
+	public func superDecoder(forKey key: Key) throws -> Decoder
+	{
+		assertionFailure("Hasn't implemented yet")
 		return try _superDecoder(forKey: key)
 	}
 }
