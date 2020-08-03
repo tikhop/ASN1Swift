@@ -879,11 +879,9 @@ private struct ASN1UnkeyedDecodingContainer: UnkeyedDecodingContainer
 	/// The index of the element we're about to decode.
 	public var currentIndex: Int
 	
-	
-	
 	var count: Int?
 	
-	var isAtEnd: Bool = false
+	var isAtEnd: Bool { container.data.isEmpty }
 	
 	init(referencing decoder: _ASN1Decoder, wrapping container: _ASN1Decoder.State)
 	{
@@ -919,20 +917,7 @@ private struct ASN1UnkeyedDecodingContainer: UnkeyedDecodingContainer
 	}
 	
 	mutating func decode(_ type: Int.Type) throws -> Int {
-		guard !self.isAtEnd else {
-			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath + [ASN1Key(index: self.currentIndex)], debugDescription: "Unkeyed container is at end."))
-		}
-		
-		self.decoder.codingPath.append(ASN1Key(index: self.currentIndex))
-		defer { self.decoder.codingPath.removeLast() }
-		
-		guard let decoded = try self.decoder.unbox(self.container.data, as: Int.self) else
-		{
-			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath + [ASN1Key(index: self.currentIndex)], debugDescription: "Expected \(type) but found null instead."))
-		}
-		
-		self.currentIndex += 1
-		return decoded
+		return 0
 	}
 	
 	mutating func decode(_ type: Int8.Type) throws -> Int8 {
@@ -977,15 +962,27 @@ private struct ASN1UnkeyedDecodingContainer: UnkeyedDecodingContainer
 			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Unkeyed container is at end."))
 		}
 		
-		//self.decoder.codingPath.append(_JSONKey(index: self.currentIndex))
-		//defer { self.decoder.codingPath.removeLast() }
+		self.decoder.codingPath.append(ASN1Key(index: self.currentIndex))
+		defer { self.decoder.codingPath.removeLast() }
 		
-		guard let decoded = try self.decoder.unbox(Data([self.container.data[self.currentIndex]]), as: type) else {
-			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath + [ASN1Key(index: self.currentIndex)], debugDescription: "Expected \(type) but found null instead."))
+		
+		guard let t = type as? ASN1Decodable.Type else
+		{
+			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: ""))
 		}
 		
+		let entry = self.container.data
+		var c: Int = 0
+		let data = self.decoder.extractValue(from: entry, with: t.template.expectedTags, consumed: &c)
+		self.container.data = c >= entry.count ? Data() : entry.advanced(by: c)
+		
+		guard let value = try self.decoder.unbox(entry.prefix(c), as: type) else {
+			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Expected \(type) value but found null instead."))
+		}
+		
+		
 		self.currentIndex += 1
-		return decoded
+		return value
 	}
 	
 	mutating func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type) throws -> KeyedDecodingContainer<NestedKey> where NestedKey : CodingKey

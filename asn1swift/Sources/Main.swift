@@ -27,7 +27,6 @@ class A
 
 struct B
 {
-	
 	var shorInt: UInt8 = 8
 	var str: String = "12321#"
 	var shorInt2: UInt8 = 9
@@ -48,9 +47,21 @@ struct ReceiptPayload: ASN1Decodable
 
 	init(from decoder: Decoder) throws
 	{
-		let container = try decoder.unkeyedContainer()
-		//container.dec
-		attributes = []
+		var container = try decoder.unkeyedContainer()
+		
+		var attr: [ReceiptAttribute] = []
+		while !container.isAtEnd
+		{
+			do
+			{
+				let element = try container.decode(ReceiptAttribute.self)
+				attr.append(element)
+			}catch{
+				assertionFailure("Something wrong here")
+			}
+		}
+		
+		attributes = attr
 	}
 }
 
