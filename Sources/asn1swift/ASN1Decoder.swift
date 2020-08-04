@@ -199,36 +199,39 @@ extension _ASN1Decoder
 {
 	func extractValue(from data: Data, with expectedTags: [ASN1Tag], consumed: inout Int) throws -> Data
 	{
-//		return data.withUnsafeBytes { (p: UnsafeRawBufferPointer) in
-//			let pp = p.baseAddress!
-//			print(p)
-//
-//		return Data()
-//		}
-		var len: Int = 0
-		let cons = try checkTags(from: data, with: expectedTags, lastTlvLength: &len)
-		consumed = cons + len
-	
-		var innerData: Data = data
-	
-		if len == 0 || cons == data.count
-		{
-			innerData = Data()
-		}else{
-			innerData = innerData.advanced(by: cons)
+		
+		return try data.withUnsafeBytes { (p: UnsafeRawBufferPointer) in
 			
-			if len != 0
+			var pp = p.baseAddress!.assumingMemoryBound(to: UInt8.self)
+			
+			//UnsafePointer<UInt8>()
+			var len: Int = 0
+			let cons = try checkTags(from: pp, size: data.count, with: expectedTags, lastTlvLength: &len)
+			consumed = cons + len
+			
+			var innerData: Data = data
+			
+			if len == 0 || cons == data.count
 			{
-				innerData = innerData.prefix(len)
+				innerData = Data()
+			}else{
+				innerData = innerData.advanced(by: cons)
+				
+				if len != 0
+				{
+					innerData = innerData.prefix(len)
+				}
 			}
+			
+			return innerData
 		}
 		
-		return innerData
 		
 	}
 	
-	func checkTags(from data: Data, with expectedTags: [ASN1Tag], lastTlvLength: inout Int) throws -> ASN1DecoderConsumedValue
+	func checkTags(from ptr: UnsafePointer<UInt8>, size: Int, with expectedTags: [ASN1Tag], lastTlvLength: inout Int) throws -> ASN1DecoderConsumedValue
 	{
+		var ptr = ptr
 		var consumedMyself: Int = 0
 		var tagLen: Int = 0 // Length of tag
 		var lenOfLen: Int = 0 // Lenght of L
@@ -238,39 +241,32 @@ extension _ASN1Decoder
 		var limitLen: Int = -1
 		var expectEOCTerminators: Int = 0
 		
-		var data: Data = data
+		//var data: Data = data
 		var step: Int = 0
 		
-		for _tag in expectedTags
+		for tag in expectedTags
 		{
 			//expectEOCTerminators = 0
 			
-			var t = _tag
-			let tag = withUnsafePointer(to: &t) { (p) -> UInt8 in
-				return p.withMemoryRebound(to: UInt8.self, capacity: MemoryLayout<UInt8>.size) { p in
-					return p.pointee
-				}
-			}
-			
-			tagLen = fetchTag(from: data, to: &tlvTag)
+			tagLen = fetchTag(from: ptr, size: size, to: &tlvTag)
 			
 			if tagLen == -1
 			{
 				throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: [], debugDescription: "Data corrupted"))
 			}
 			
-			tlvConstr = tlvConstructed(tag: data.first!)
+			tlvConstr = tlvConstructed(tag: ptr[0])
 			
 			if tlvTag != tag
 			{
 				throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: [], debugDescription: "Unexpected tag. Inappropriate."))
 			}
 			
-			lenOfLen = fetchLength(from: data.advanced(by: tagLen), isConstructed: tlvConstr, rLen: &tlvLen)
+			lenOfLen = fetchLength(from: ptr + 1, size: size - 1, isConstructed: tlvConstr, rLen: &tlvLen)
 			
 			if tlvLen == -1 // Indefinite length.
 			{
-				let calculatedLen = calculateLength(from: data.advanced(by: tagLen), isConstructed: tlvConstr) - lenOfLen
+				let calculatedLen = calculateLength(from: ptr + tagLen, size: size - tagLen, isConstructed: tlvConstr) - lenOfLen
 				
 				if calculatedLen > 0
 				{
@@ -304,19 +300,19 @@ extension _ASN1Decoder
 //				return -1
 //			}
 			
-			if tagLen + lenOfLen == data.count
-			{
-				data = Data()
-			}else{
-				data = data.advanced(by: tagLen + lenOfLen)
-				
-				if tlvLen != 0
-				{
-					data = data.prefix(tlvLen)
-				}
-			}
+//			if tagLen + lenOfLen == size //data.count
+//			{
+//				data = Data()
+//			}else{
+//				data = data.advanced(by:
+//
+//				if tlvLen != 0
+//				{
+//					data = data.prefix(tlvLen)
+//				}
+//			}
 			
-			
+			ptr += (tagLen + lenOfLen)
 			consumedMyself += (tagLen + lenOfLen)
 			
 			limitLen -= (tagLen + lenOfLen + expectEOCTerminators)
@@ -328,12 +324,9 @@ extension _ASN1Decoder
 		return consumedMyself
 	}
 	
-	func fetchTag(from data: Data, to rTag: inout ASN1Tag) -> ASN1DecoderConsumedValue
+	func fetchTag(from ptr: UnsafePointer<UInt8>, size: Int, to rTag: inout ASN1Tag) -> ASN1DecoderConsumedValue
 	{
-		guard let firstByte = data.first else
-		{
-			return 0
-		}
+		let firstByte = ptr.pointee
 		
 		var rawTag: UInt8 = firstByte
 		let rawTagClass: UInt8 = rawTag >> 6
@@ -350,14 +343,16 @@ extension _ASN1Decoder
 		var skipped: Int = 2
 		
 		//TODO: do not allocate new data, use slice instead
-		let d = data.advanced(by: 1)
-		for b in d.enumerated()
+		//let d = data.advanced(by: 1)
+		for i in 1..<size
 		{
-			if skipped > d.count { break }
+			if skipped > size { break }
+		
+			let b = ptr[i]
 			
-			if b.element & ASN1Identifier.Modifiers.contextSpecific != 0
+			if b & ASN1Identifier.Modifiers.contextSpecific != 0
 			{
-				val = (val << 7) | UInt(b.element & ASN1Identifier.Tag.highTag)
+				val = (val << 7) | UInt(b & ASN1Identifier.Tag.highTag)
 				
 				if val >> ((8 * MemoryLayout.size(ofValue: val)) - 9) != 0
 				{
@@ -366,7 +361,7 @@ extension _ASN1Decoder
 					break
 				}
 			}else{
-				val = (val << 7) | UInt(b.element)
+				val = (val << 7) | UInt(b)
 				rTag = UInt8(val << 2) | rawTagClass;
 				break
 			}
@@ -377,13 +372,9 @@ extension _ASN1Decoder
 		return skipped
 	}
 	
-	func fetchLength(from data: Data, isConstructed: Bool, rLen: inout Int) -> ASN1DecoderConsumedValue
+	func fetchLength(from ptr: UnsafePointer<UInt8>, size: Int, isConstructed: Bool, rLen: inout Int) -> ASN1DecoderConsumedValue
 	{
-		guard var oct = data.first else
-		{
-			assertionFailure("Empty data")
-			return -1
-		}
+		var oct = ptr.pointee
 		
 		if (oct & 0x80) == 0
 		{
@@ -408,18 +399,19 @@ extension _ASN1Decoder
 			
 			oct &= ASN1Identifier.Tag.tagNumMask
 			
-			let d = data.advanced(by: 1)
 			var skipped: Int = 1
-			for b in d
+			for i in 1..<size
 			{
 				if oct == 0 { break }
 				
 				skipped += 1
 				
-				if skipped > data.count
+				if skipped > size
 				{
 					break
 				}
+				
+				let b = ptr[i]
 				
 				len = (len << 8) | Int(b)
 				oct -= 1
@@ -441,17 +433,18 @@ extension _ASN1Decoder
 		}
 	}
 	
-	func calculateLength(from data: Data, isConstructed: Bool) -> Int
+	func calculateLength(from ptr: UnsafePointer<UInt8>, size: Int, isConstructed: Bool) -> Int
 	{
-		let rawData: Data = data
-		var data: Data = data
+		var ptr = ptr
+		let rawSize = size
+		var size = size
+		
 		var vlen: Int = 0 /* Length of V in TLV */
 		var tl: Int = 0 /* Length of L in TLV */
 		var ll: Int = 0 /* Length of L in TLV */
 		var skip: Int = 0
-		var size: Int = data.count
 		
-		ll = fetchLength(from: data, isConstructed: isConstructed, rLen: &vlen)
+		ll = fetchLength(from: ptr, size: size, isConstructed: isConstructed, rLen: &vlen)
 		
 		if ll <= 0
 		{
@@ -462,7 +455,7 @@ extension _ASN1Decoder
 		{
 			skip = ll + vlen
 			
-			if skip > data.count
+			if skip > size
 			{
 				assertionFailure("Not enought data")
 				return 0
@@ -472,27 +465,26 @@ extension _ASN1Decoder
 		}
 		
 		skip = ll
-		data = data.advanced(by: ll)
-		size -= 11
+		ptr = ptr + ll
+		size -= ll
 		
 		while true {
 			var tag: ASN1Tag = 0
 			
-			tl = fetchTag(from: data, to: &tag)
+			tl = fetchTag(from: ptr, size: size, to: &tag)
 			if tl <= 0 { return tl }
 			
-			ll = calculateLength(from: data.advanced(by: tl), isConstructed: tlvConstructed(tag: tag))
+			ll = calculateLength(from: ptr + tl, size: size - tl, isConstructed: tlvConstructed(tag: tag))
 			if ll <= 0 { return ll }
 			
 			skip += tl + ll
 			
-			if(data[0] == 0 && data[1] == 0) { return skip }
+			if(ptr.pointee == 0 && (ptr+1).pointee == 0) { return skip }
 				
-			if skip == rawData.count { return skip }
+			if skip == rawSize { return skip }
 			
-			data = data.advanced(by: tl + ll)
-			size -= tl + ll
-			
+			ptr += (tl + ll)
+			size -= (tl + ll)
 		}
 	
 		assertionFailure("Not supposed to be here")

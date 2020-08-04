@@ -197,48 +197,43 @@ extension InAppReceiptPayload: PKCS7Payload
 		
 		while !container.isAtEnd
 		{
-			do
+			let attribute = try container.decode(ReceiptAttribute.self)
+			
+			guard let receiptField = InAppReceiptField(rawValue: attribute.type) else
 			{
-				let attribute = try container.decode(ReceiptAttribute.self)
-				
-				guard let receiptField = InAppReceiptField(rawValue: attribute.type) else
-				{
-					continue
-				}
-				
-				let octetString = attribute.value
-				let valueData = try asn1Decoder.decode(Data.self, from: octetString, template: .universal(ASN1Identifier.Tag.octetString))
-				
-				switch (receiptField)
-				{
-				case .bundleIdentifier:
-					bundleIdentifier = try asn1Decoder.decode(String.self, from: valueData)
-					bundleIdentifierData = octetString //valueData TODO: check this
-				case .appVersion:
-					appVersion = try asn1Decoder.decode(String.self, from: valueData)
-				case .opaqueValue:
-					opaqueValue = valueData
-				case .receiptHash:
-					receiptHash = valueData
-				case .inAppPurchaseReceipt:
-					purchases.append(try asn1Decoder.decode(InAppPurchase.self, from: valueData))
-					break
-				case .originalAppVersion:
-					originalAppVersion = try asn1Decoder.decode(String.self, from: valueData)
-				case .expirationDate:
-					expirationDate = try asn1Decoder.decode(String.self, from: valueData, template: .universal(ASN1Identifier.Tag.ia5String))
-				case .receiptCreationDate:
-					receiptCreationDate = try asn1Decoder.decode(String.self, from: valueData, template: .universal(ASN1Identifier.Tag.ia5String))
-				case .environment:
-					environment = try asn1Decoder.decode(String.self, from: valueData)
-				default:
-					print("attribute.type = \(String(describing: attribute.type)))")
-				}
-				
-				attr.append(attribute)
-			}catch{
-				assertionFailure("Something wrong here")
+				continue
 			}
+			
+			let octetString = attribute.value
+			let valueData = try asn1Decoder.decode(Data.self, from: octetString, template: .universal(ASN1Identifier.Tag.octetString))
+			
+			switch (receiptField)
+			{
+			case .bundleIdentifier:
+				bundleIdentifier = try asn1Decoder.decode(String.self, from: valueData)
+				bundleIdentifierData = octetString //valueData TODO: check this
+			case .appVersion:
+				appVersion = try asn1Decoder.decode(String.self, from: valueData)
+			case .opaqueValue:
+				opaqueValue = valueData
+			case .receiptHash:
+				receiptHash = valueData
+			case .inAppPurchaseReceipt:
+				purchases.append(try asn1Decoder.decode(InAppPurchase.self, from: valueData))
+				break
+			case .originalAppVersion:
+				originalAppVersion = try asn1Decoder.decode(String.self, from: valueData)
+			case .expirationDate:
+				expirationDate = try asn1Decoder.decode(String.self, from: valueData, template: .universal(ASN1Identifier.Tag.ia5String))
+			case .receiptCreationDate:
+				receiptCreationDate = try asn1Decoder.decode(String.self, from: valueData, template: .universal(ASN1Identifier.Tag.ia5String))
+			case .environment:
+				environment = try asn1Decoder.decode(String.self, from: valueData)
+			default:
+				print("attribute.type = \(String(describing: attribute.type)))")
+			}
+			
+			attr.append(attribute)
 		}
 		
 		self.init(bundleIdentifier: bundleIdentifier,
@@ -266,57 +261,54 @@ extension InAppPurchase: ASN1Decodable
 		
 		while !container.isAtEnd
 		{
-			do
+			let attribute = try container.decode(ReceiptAttribute.self)
+			
+			guard let field = InAppReceiptField(rawValue: attribute.type) else
 			{
-				let attribute = try container.decode(ReceiptAttribute.self)
-				
-				guard let field = InAppReceiptField(rawValue: attribute.type) else
+				continue
+			}
+			
+			let octetString = attribute.value
+			let valueData = try asn1Decoder.decode(Data.self, from: octetString, template: .universal(ASN1Identifier.Tag.octetString))
+			
+			switch field
+			{
+			case .quantity:
+				quantity = try asn1Decoder.decode(Int.self, from: valueData)
+			case .productIdentifier:
+				productIdentifier = try asn1Decoder.decode(String.self, from: valueData)
+			case .productType:
+				productType = Type(rawValue: try asn1Decoder.decode(Int.self, from: valueData)) ?? .unknown
+			case .transactionIdentifier:
+				transactionIdentifier = try asn1Decoder.decode(String.self, from: valueData)
+			case .purchaseDate:
+				purchaseDateString = try asn1Decoder.decode(String.self, from: valueData, template: .universal(ASN1Identifier.Tag.ia5String))
+			case .originalTransactionIdentifier:
+				originalTransactionIdentifier = try asn1Decoder.decode(String.self, from: valueData)
+			case .originalPurchaseDate:
+				originalPurchaseDateString = try asn1Decoder.decode(String.self, from: valueData, template: .universal(ASN1Identifier.Tag.ia5String))
+			case .subscriptionExpirationDate:
+				if !valueData.isEmpty
 				{
-					continue
+					let str = try asn1Decoder.decode(String.self, from: valueData, template: .universal(ASN1Identifier.Tag.ia5String))
+					subscriptionExpirationDateString = str == "" ? nil : str
 				}
-				
-				let octetString = attribute.value
-				let valueData = try asn1Decoder.decode(Data.self, from: octetString, template: .universal(ASN1Identifier.Tag.octetString))
-				
-				switch field
+			case .cancellationDate:
+				if !valueData.isEmpty
 				{
-				case .quantity:
-					quantity = try asn1Decoder.decode(Int.self, from: valueData)
-				case .productIdentifier:
-					productIdentifier = try asn1Decoder.decode(String.self, from: valueData)
-				case .productType:
-					productType = Type(rawValue: try asn1Decoder.decode(Int.self, from: valueData)) ?? .unknown
-				case .transactionIdentifier:
-					transactionIdentifier = try asn1Decoder.decode(String.self, from: valueData)
-				case .purchaseDate:
-					purchaseDateString = try asn1Decoder.decode(String.self, from: valueData, template: .universal(ASN1Identifier.Tag.ia5String))
-				case .originalTransactionIdentifier:
-					originalTransactionIdentifier = try asn1Decoder.decode(String.self, from: valueData)
-				case .originalPurchaseDate:
-					originalPurchaseDateString = try asn1Decoder.decode(String.self, from: valueData, template: .universal(ASN1Identifier.Tag.ia5String))
-				case .subscriptionExpirationDate:
-					if !valueData.isEmpty
-					{
-						let str = try asn1Decoder.decode(String.self, from: valueData, template: .universal(ASN1Identifier.Tag.ia5String))
-						subscriptionExpirationDateString = str == "" ? nil : str
-					}
-				case .cancellationDate:
-					if !valueData.isEmpty
-					{
-						let str = try asn1Decoder.decode(String.self, from: valueData, template: .universal(ASN1Identifier.Tag.ia5String))
-						cancellationDateString = str == "" ? nil : str
-					}
-				case .webOrderLineItemID:
-					webOrderLineItemID = try asn1Decoder.decode(Int.self, from: valueData)
-				case .subscriptionTrialPeriod:
-					subscriptionTrialPeriod = (try asn1Decoder.decode(Int.self, from: valueData)) != 0
-				case .subscriptionIntroductoryPricePeriod:
-					subscriptionIntroductoryPricePeriod = (try asn1Decoder.decode(Int.self, from: valueData)) != 0
-				case .promotionalOfferIdentifier:
-					promotionalOfferIdentifier = try asn1Decoder.decode(String.self, from: valueData)
-				default:
-					break
+					let str = try asn1Decoder.decode(String.self, from: valueData, template: .universal(ASN1Identifier.Tag.ia5String))
+					cancellationDateString = str == "" ? nil : str
 				}
+			case .webOrderLineItemID:
+				webOrderLineItemID = try asn1Decoder.decode(Int.self, from: valueData)
+			case .subscriptionTrialPeriod:
+				subscriptionTrialPeriod = (try asn1Decoder.decode(Int.self, from: valueData)) != 0
+			case .subscriptionIntroductoryPricePeriod:
+				subscriptionIntroductoryPricePeriod = (try asn1Decoder.decode(Int.self, from: valueData)) != 0
+			case .promotionalOfferIdentifier:
+				promotionalOfferIdentifier = try asn1Decoder.decode(String.self, from: valueData)
+			default:
+				break
 			}
 		}
 	}
