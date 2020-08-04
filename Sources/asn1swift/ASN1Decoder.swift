@@ -32,7 +32,7 @@ open class ASN1Decoder
 	/// - throws: An error if any value throws an error during decoding.
 	open func decode<T : ASN1Decodable>(_ type: T.Type, from data: Data, template: ASN1Template? = nil) throws -> T
 	{
-		let t: ASN1Template = template ?? type.template
+		let t: ASN1Template = template ?? type.template()
 		
 		let opt = EncodingOptions()
 		let decoder = _ASN1Decoder(referencing: _ASN1Decoder.State(data: data, template: t), options: opt)
@@ -224,11 +224,10 @@ extension _ASN1Decoder
 		var limitLen: Int = -1
 		var expectEOCTerminators: Int = 0
 		
-		var rawData: Data = data
 		var data: Data = data
 		var step: Int = 0
 		
-		for (tagNo, _tag) in expectedTags.enumerated()
+		for _tag in expectedTags
 		{
 			//expectEOCTerminators = 0
 			
@@ -418,7 +417,7 @@ extension _ASN1Decoder
 	
 	func calculateLength(from data: Data, isConstructed: Bool) -> Int
 	{
-		var rawData: Data = data
+		let rawData: Data = data
 		var data: Data = data
 		var vlen: Int = 0 /* Length of V in TLV */
 		var tl: Int = 0 /* Length of L in TLV */
@@ -487,8 +486,10 @@ extension _ASN1Decoder: SingleValueDecodingContainer
 		}
 	}
 	
-	public func decodeNil() -> Bool {
-		return self.storage.current is NSNull
+	public func decodeNil() -> Bool
+	{
+		assertionFailure("Not supposed to be here")
+		return false
 	}
 	
 	public func decode(_ type: Bool.Type) throws -> Bool {
@@ -627,10 +628,10 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContaine
 		return "\(key) (\"\(key.stringValue)\")"
 	}
 	
-	public func decodeNil(forKey key: Key) throws -> Bool {
-		let entry = self.container.data
-		
-		return entry is NSNull
+	public func decodeNil(forKey key: Key) throws -> Bool
+	{
+		assertionFailure("Not supposed to be here")
+		return false
 	}
 	
 	public func decode(_ type: Bool.Type, forKey key: Key) throws -> Bool {
@@ -1023,7 +1024,7 @@ private struct ASN1UnkeyedDecodingContainer: UnkeyedDecodingContainer
 		
 		let entry = self.container.data
 		var c: Int = 0
-		let data = self.decoder.extractValue(from: entry, with: t.template.expectedTags, consumed: &c)
+		let data = self.decoder.extractValue(from: entry, with: t.template().expectedTags, consumed: &c)
 		self.container.data = c >= entry.count ? Data() : entry.advanced(by: c)
 		
 		guard let value = try self.decoder.unbox(entry.prefix(c), as: type) else {
@@ -1363,7 +1364,7 @@ extension _ASN1Decoder
 				return try type.init(from: self)
 			}else if let t = type as? ASN1Decodable.Type
 			{
-				let s = _ASN1Decoder.State(data: value, template: t.template)
+				let s = _ASN1Decoder.State(data: value, template: t.template())
 				self.storage.push(container: s)
 				defer { self.storage.popContainer() }
 				
@@ -1381,7 +1382,7 @@ extension _ASN1Decoder
 
 extension Int: ASN1Decodable
 {
-	public static var template: ASN1Template
+	public static func template() -> ASN1Template
 	{
 		return ASN1Template.universal(2)
 		
@@ -1390,7 +1391,7 @@ extension Int: ASN1Decodable
 
 extension Data: ASN1Decodable
 {
-	public static var template: ASN1Template
+	public static func template() -> ASN1Template
 	{
 		assertionFailure("Provide template")
 		return ASN1Template.universal(0)
