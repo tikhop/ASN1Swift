@@ -197,7 +197,7 @@ public class _ASN1Decoder: Decoder
 
 extension _ASN1Decoder
 {
-	func extractValue(from data: Data, with expectedTags: [UInt32], consumed: inout Int) throws -> Data
+	func extractValue(from data: Data, with expectedTags: [ASN1Tag], consumed: inout Int) throws -> Data
 	{
 //		return data.withUnsafeBytes { (p: UnsafeRawBufferPointer) in
 //			let pp = p.baseAddress!
@@ -213,7 +213,7 @@ extension _ASN1Decoder
 		
 	}
 	
-	func checkTags(from data: Data, with expectedTags: [UInt32], lastTlvLength: inout Int) throws -> ASN1DecoderConsumedValue
+	func checkTags(from data: Data, with expectedTags: [ASN1Tag], lastTlvLength: inout Int) throws -> ASN1DecoderConsumedValue
 	{
 		var consumedMyself: Int = 0
 		var tagLen: Int = 0
@@ -560,14 +560,28 @@ extension _ASN1Decoder: SingleValueDecodingContainer
 		return try self.unbox(self.storage.current.data, as: Double.self)!
 	}
 	
-	public func decode(_ type: String.Type) throws -> String {
-		try expectNonNull(String.self)
-		return try self.unbox(self.storage.current.data, as: String.self)!
+	public func decode(_ type: String.Type) throws -> String
+	{
+		let data = try dataToUnbox(String.self)
+		
+		return try self.unbox(data, as: String.self, encoding: self.storage.current.template.stringEncoding)!
 	}
 	
 	public func decode<T : Decodable>(_ type: T.Type) throws -> T {
 		try expectNonNull(type)
 		return try self.unbox(self.storage.current.data, as: type)!
+	}
+	
+	fileprivate func dataToUnbox<T: ASN1Decodable>(_ type: T.Type) throws -> Data
+	{
+		let entry = self.storage.current.data
+		var c: Int = 0
+		let data = try self.extractValue(from: entry, with: type.template.expectedTags, consumed: &c)
+		
+		// Shift data (position)
+		self.storage.current.data = c >= entry.count ? Data() : entry.advanced(by: c)
+		
+		return data
 	}
 }
 
@@ -820,35 +834,41 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContaine
 		return value
 	}
 	
-	public func decode(_ type: String.Type, forKey key: Key) throws -> String {
+	public func decode(_ type: String.Type, forKey key: Key, stringEncoding: String.Encoding) throws -> String
+	{
 		let entry = self.container.data
 		
 		self.decoder.codingPath.append(key)
 		defer { self.decoder.codingPath.removeLast() }
 		
-		guard let value = try self.decoder.unbox(entry, as: String.self) else {
+		var c: Int = 0
+		let data = try self.decoder.extractValue(from: entry, with: stringEncoding.template.expectedTags, consumed: &c)
+		
+		// Shift data (position)
+		self.container.data = c >= entry.count ? Data() : entry.advanced(by: c)
+		
+		guard let value = try self.decoder.unbox(data, as: String.self, encoding: stringEncoding) else
+		{
 			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Expected \(type) value but found null instead."))
 		}
 		
 		return value
 	}
 	
-	public func decodeData(forKey key: Key) throws -> Data {
+	public func decode(_ type: String.Type, forKey key: Key) throws -> String
+	{
+		return try decode(String.self, forKey: key, stringEncoding: .utf8)
+	}
+	
+	public func decodeData(forKey key: Key) throws -> Data
+	{
 		self.decoder.codingPath.append(key)
 		defer { self.decoder.codingPath.removeLast() }
 		
-		guard let k = key as? ASN1CodingKey else
+		var c = 0
+		let data = try dataToUnbox(forKey: key, consumed: &c)
+		guard let value = try self.decoder.unbox(data, as: Data.self) else
 		{
-			// throw
-			return Data()
-		}
-		
-		let entry = self.container.data
-		var c: Int = 0
-		let data = try self.decoder.extractValue(from: entry, with: k.template.expectedTags, consumed: &c)
-		self.container.data = c >= entry.count ? Data() : entry.advanced(by: c)
-		
-		guard let value = try self.decoder.unbox(data, as: Data.self) else {
 			assertionFailure("Something wrong")
 			return Data()
 		}
@@ -856,7 +876,8 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContaine
 		return value
 	}
 	
-	public func decode<T : Decodable>(_ type: T.Type, forKey key: Key) throws -> T {
+	public func decode<T : Decodable>(_ type: T.Type, forKey key: Key) throws -> T
+	{
 		if type == Data.self || type == NSData.self
 		{
 			return try decodeData(forKey: key) as! T
@@ -865,21 +886,34 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContaine
 		self.decoder.codingPath.append(key)
 		defer { self.decoder.codingPath.removeLast() }
 		
-		guard let k = key as? ASN1CodingKey else
-		{
-			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: ""))
-		}
-		
+		// Save current state
 		let entry = self.container.data
-		var c: Int = 0
-		let data = try self.decoder.extractValue(from: entry, with: k.template.expectedTags, consumed: &c)
-		self.container.data = c >= entry.count ? Data() : entry.advanced(by: c)
 		
-		guard let value = try self.decoder.unbox(entry.prefix(c), as: type) else {
+		var c: Int = 0
+		let _ = try dataToUnbox(forKey: key, consumed: &c) // just consume and obtain `c`
+		
+		guard let value = try self.decoder.unbox(entry.prefix(c), as: type) else
+		{
 			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Expected \(type) value but found null instead."))
 		}
 		
 		return value
+	}
+	
+	fileprivate func dataToUnbox(forKey key: Key, consumed: inout Int) throws -> Data
+	{
+		guard let k = key as? ASN1CodingKey else
+		{
+			throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "key is not ASN1CodingKey"))
+		}
+		
+		let entry = self.container.data
+		let data = try self.decoder.extractValue(from: entry, with: k.template.expectedTags, consumed: &consumed)
+		
+		// Shift data (position)
+		self.container.data = consumed >= entry.count ? Data() : entry.advanced(by: consumed)
+		
+		return data
 	}
 	
 	public func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type, forKey key: Key) throws -> KeyedDecodingContainer<NestedKey>
@@ -947,67 +981,144 @@ private struct ASN1UnkeyedDecodingContainer: UnkeyedDecodingContainer
 		self.container = ct
 	}
 	
-	mutating func decodeNil() throws -> Bool {
+	mutating func decodeNil() throws -> Bool
+	{
+		assertionFailure("Hasn't implemented yet")
 		return true
 	}
 	
-	mutating func decode(_ type: Bool.Type) throws -> Bool {
+	mutating func decode(_ type: Bool.Type) throws -> Bool
+	{
+		guard !self.isAtEnd else
+		{
+			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Unkeyed container is at end."))
+		}
+		
+		self.decoder.codingPath.append(ASN1Key(index: self.currentIndex))
+		defer { self.decoder.codingPath.removeLast() }
+		
+		assertionFailure("Hasn't implemented yet")
 		return false
 	}
 	
-	mutating func decode(_ type: String.Type) throws -> String {
+	mutating func decode(_ type: String.Type) throws -> String
+	{
+		guard !self.isAtEnd else
+		{
+			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Unkeyed container is at end."))
+		}
+		
+		self.decoder.codingPath.append(ASN1Key(index: self.currentIndex))
+		defer { self.decoder.codingPath.removeLast() }
+		
 		return ""
 	}
 	
-	mutating func decode(_ type: Double.Type) throws -> Double {
+	mutating func decode(_ type: Double.Type) throws -> Double
+	{
+		guard !self.isAtEnd else
+		{
+			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Unkeyed container is at end."))
+		}
+		
+		self.decoder.codingPath.append(ASN1Key(index: self.currentIndex))
+		defer { self.decoder.codingPath.removeLast() }
+		
+		assertionFailure("Hasn't implemented yet")
 		return 0
 	}
 	
-	mutating func decode(_ type: Float.Type) throws -> Float {
+	mutating func decode(_ type: Float.Type) throws -> Float
+	{
+		guard !self.isAtEnd else
+		{
+			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Unkeyed container is at end."))
+		}
+		
+		self.decoder.codingPath.append(ASN1Key(index: self.currentIndex))
+		defer { self.decoder.codingPath.removeLast() }
+		
+		assertionFailure("Hasn't implemented yet")
 		return 0
 	}
 	
-	mutating func decode(_ type: Int.Type) throws -> Int {
+	mutating func decode(_ type: Int.Type) throws -> Int
+	{
+		guard !self.isAtEnd else
+		{
+			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Unkeyed container is at end."))
+		}
+		
+		self.decoder.codingPath.append(ASN1Key(index: self.currentIndex))
+		defer { self.decoder.codingPath.removeLast() }
+		
 		return 0
 	}
 	
-	mutating func decode(_ type: Int8.Type) throws -> Int8 {
-		return 0
+	mutating func decode(_ type: Int8.Type) throws -> Int8
+	{
+		return try Int8(decode(Int.self))
 	}
 	
-	mutating func decode(_ type: Int16.Type) throws -> Int16 {
-		return 0
+	mutating func decode(_ type: Int16.Type) throws -> Int16
+	{
+		return try Int16(decode(Int.self))
 	}
 	
-	mutating func decode(_ type: Int32.Type) throws -> Int32 {
-		return 0
+	mutating func decode(_ type: Int32.Type) throws -> Int32
+	{
+		return try Int32(decode(Int.self))
 	}
 	
-	mutating func decode(_ type: Int64.Type) throws -> Int64 {
-		return 0
+	mutating func decode(_ type: Int64.Type) throws -> Int64
+	{
+		return try Int64(decode(Int.self))
 	}
 	
-	mutating func decode(_ type: UInt.Type) throws -> UInt {
-		return 0
+	mutating func decode(_ type: UInt.Type) throws -> UInt
+	{
+		return try UInt(decode(Int.self))
 	}
 	
-	mutating func decode(_ type: UInt8.Type) throws -> UInt8 {
-		return 0
+	mutating func decode(_ type: UInt8.Type) throws -> UInt8
+	{
+		return try UInt8(decode(Int.self))
 	}
 	
-	mutating func decode(_ type: UInt16.Type) throws -> UInt16 {
-		return 0
+	mutating func decode(_ type: UInt16.Type) throws -> UInt16
+	{
+		return try UInt16(decode(Int.self))
 	}
 	
-	mutating func decode(_ type: UInt32.Type) throws -> UInt32 {
-		return 0
+	mutating func decode(_ type: UInt32.Type) throws -> UInt32
+	{
+		return try UInt32(decode(Int.self))
 	}
 	
-	mutating func decode(_ type: UInt64.Type) throws -> UInt64 {
-		return 0
+	mutating func decode(_ type: UInt64.Type) throws -> UInt64
+	{
+		return try UInt64(decode(Int.self))
 	}
 	
-	mutating func decode<T>(_ type: T.Type) throws -> T where T : Decodable {
+	fileprivate func dataToUnbox<T: Decodable>(_ type: T.Type) throws -> Data
+	{
+		guard let t = type as? ASN1Decodable.Type else
+		{
+			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: ""))
+		}
+		
+		let entry = self.container.data
+		var c: Int = 0
+		let data = try self.decoder.extractValue(from: entry, with: t.template.expectedTags, consumed: &c)
+		
+		// Shift data (position)
+		self.container.data = c >= entry.count ? Data() : entry.advanced(by: c)
+		
+		return data
+	}
+	
+	mutating func decode<T>(_ type: T.Type) throws -> T where T: Decodable
+	{
 		guard !self.isAtEnd else
 		{
 			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Unkeyed container is at end."))
@@ -1035,6 +1146,7 @@ private struct ASN1UnkeyedDecodingContainer: UnkeyedDecodingContainer
 		self.currentIndex += 1
 		return value
 	}
+	
 	
 	mutating func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type) throws -> KeyedDecodingContainer<NestedKey> where NestedKey : CodingKey
 	{
@@ -1289,14 +1401,14 @@ extension _ASN1Decoder
 		throw DecodingError._typeMismatch(at: self.codingPath, expectation: type, reality: value)
 	}
 	
-	func unbox(_ value: Data, as type: String.Type) throws -> String? {
-		
-		
-		guard let string = value as? String else {
-			throw DecodingError._typeMismatch(at: self.codingPath, expectation: type, reality: value)
-		}
-		
-		return string
+	func unbox(_ value: Data, as type: String.Type, encoding: String.Encoding) throws -> String?
+	{
+		return String(bytes: value, encoding: encoding)
+	}
+	
+	func unbox(_ value: Data, as type: String.Type) throws -> String?
+	{
+		return try unbox(value, as: type, encoding: .utf8)
 	}
 	
 	func unbox(_ value: Data, as type: Date.Type) throws -> Date? {
@@ -1379,25 +1491,6 @@ extension _ASN1Decoder
 	}
 }
 
-
-extension Int: ASN1Decodable
-{
-	public static var template: ASN1Template
-	{
-		return ASN1Template.universal(2)
-		
-	}
-}
-
-extension Data: ASN1Decodable
-{
-	public static var template: ASN1Template
-	{
-		assertionFailure("Provide template")
-		return ASN1Template.universal(0)
-		
-	}
-}
 
 //extension UInt32
 //{

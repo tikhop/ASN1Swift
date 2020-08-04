@@ -14,6 +14,28 @@ public typealias ASN1Tag = UInt8
 extension ASN1Tag
 {
 	var unknown: ASN1Tag { 0 }
+	
+	func stringEncoding() -> String.Encoding
+	{
+		switch self
+		{
+		case ASN1Identifier.Tag.utf8String,
+			 ASN1Identifier.Tag.printableString,
+			 ASN1Identifier.Tag.numericString,
+			 ASN1Identifier.Tag.generalString,
+			 ASN1Identifier.Tag.universalString,
+			 ASN1Identifier.Tag.characterString,
+			 ASN1Identifier.Tag.t61String:
+			return .utf8
+		case ASN1Identifier.Tag.ia5String,
+			 ASN1Identifier.Tag.utcTime,
+			 ASN1Identifier.Tag.generalizedTime:
+			return .ascii
+		default:
+			assertionFailure("We can't get a string encoding for this tag")
+			return .ascii
+		}
+	}
 }
 
 public struct ASN1Identifier

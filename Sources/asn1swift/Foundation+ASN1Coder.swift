@@ -1,0 +1,56 @@
+//
+//  File.swift
+//  
+//
+//  Created by Pavel Tikhonenko on 04.08.2020.
+//
+
+import Foundation
+
+extension String: ASN1Decodable
+{
+	public static var template: ASN1Template
+	{
+		return ASN1Template.universal(ASN1Identifier.Tag.utf8String)
+	}
+}
+
+extension Int: ASN1Decodable
+{
+	public static var template: ASN1Template
+	{
+		return ASN1Template.universal(2)
+	}
+}
+
+extension Data: ASN1Decodable
+{
+	public static var template: ASN1Template
+	{
+		assertionFailure("Provide template")
+		return ASN1Template.universal(0)
+		
+	}
+}
+
+extension String.Encoding
+{
+	public var template: ASN1Template
+	{
+		switch self
+		{
+		case .ascii:
+			return ASN1Template.universal(ASN1Identifier.Tag.ia5String)
+		case .utf8:
+			return ASN1Template.universal(ASN1Identifier.Tag.utf8String)
+		default:
+			assertionFailure("Provide template for this encoding")
+			break
+		}
+		
+		assertionFailure("Provide template")
+		return ASN1Template.universal(0)
+		
+	}
+}
+

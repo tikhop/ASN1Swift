@@ -9,21 +9,21 @@ import Foundation
 
 public class ASN1Template
 {
-	var expectedTags: [UInt32] = []
+	var expectedTags: [ASN1Tag] = []
 	
-	fileprivate init(kind: UInt32)
+	fileprivate init(kind: ASN1Tag)
 	{
 		expectedTags.append(kind)
 	}
 	
-	public func implicit(tag: UInt8) -> ASN1Template
+	public func implicit(tag: ASN1Tag) -> ASN1Template
 	{
 		return self
 	}
 	
-	public func explicit(tag: UInt8) -> ASN1Template
+	public func explicit(tag: ASN1Tag) -> ASN1Template
 	{
-		expectedTags.append(UInt32(tag))
+		expectedTags.append(tag)
 		
 		return self
 	}
@@ -37,7 +37,7 @@ public class ASN1Template
 		
 		if var last = expectedTags.last
 		{
-			last |= UInt32(ASN1Identifier.Modifiers.constructed)
+			last |= ASN1Identifier.Modifiers.constructed
 			expectedTags[expectedTags.count - 1] = last
 		}
 		
@@ -47,13 +47,29 @@ public class ASN1Template
 
 public extension ASN1Template
 {
-	static func contextSpecific(_ id: UInt8) -> ASN1Template
+	static func contextSpecific(_ id: ASN1Tag) -> ASN1Template
 	{
-		return ASN1Template(kind: UInt32(ASN1Identifier.Modifiers.contextSpecific | id))
+		return ASN1Template(kind: ASN1Identifier.Modifiers.contextSpecific | id)
 	}
 	
-	static func universal(_ tag: UInt8) -> ASN1Template
+	static func universal(_ tag: ASN1Tag) -> ASN1Template
 	{
-		return ASN1Template(kind: UInt32(ASN1Identifier.Modifiers.universal | tag))
+		return ASN1Template(kind: ASN1Identifier.Modifiers.universal | tag)
+	}
+	
+	var stringEncoding: String.Encoding
+	{
+		for tag in expectedTags
+		{
+			if tag & 0xc0 != 0 // Skip iff not universal
+			{
+				continue
+			}
+			
+			return (tag as ASN1Tag).stringEncoding()
+		}
+		
+		assertionFailure("This template should be treated as a string")
+		return .utf8
 	}
 }
