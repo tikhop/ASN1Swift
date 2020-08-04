@@ -208,19 +208,33 @@ extension _ASN1Decoder
 		var len: Int = 0
 		let cons = try checkTags(from: data, with: expectedTags, lastTlvLength: &len)
 		consumed = cons + len
-		let d = data.advanced(by: cons).prefix(len)
-		return d
+	
+		var innerData: Data = data
+	
+		if len == 0 || cons == data.count
+		{
+			innerData = Data()
+		}else{
+			innerData = innerData.advanced(by: cons)
+			
+			if len != 0
+			{
+				innerData = innerData.prefix(len)
+			}
+		}
+		
+		return innerData
 		
 	}
 	
 	func checkTags(from data: Data, with expectedTags: [ASN1Tag], lastTlvLength: inout Int) throws -> ASN1DecoderConsumedValue
 	{
 		var consumedMyself: Int = 0
-		var tagLen: Int = 0
-		var lenOfLen: Int = 0
-		var tlvTag: ASN1Tag = 0
+		var tagLen: Int = 0 // Length of tag
+		var lenOfLen: Int = 0 // Lenght of L
+		var tlvTag: ASN1Tag = 0 // Tag
 		var tlvConstr: Bool = false
-		var tlvLen: Int = 0
+		var tlvLen: Int = 0 // Lenght of inner value
 		var limitLen: Int = -1
 		var expectEOCTerminators: Int = 0
 		
@@ -290,7 +304,19 @@ extension _ASN1Decoder
 //				return -1
 //			}
 			
-			data = data.advanced(by: tagLen + lenOfLen).prefix(tlvLen)
+			if tagLen + lenOfLen == data.count
+			{
+				data = Data()
+			}else{
+				data = data.advanced(by: tagLen + lenOfLen)
+				
+				if tlvLen != 0
+				{
+					data = data.prefix(tlvLen)
+				}
+			}
+			
+			
 			consumedMyself += (tagLen + lenOfLen)
 			
 			limitLen -= (tagLen + lenOfLen + expectEOCTerminators)
