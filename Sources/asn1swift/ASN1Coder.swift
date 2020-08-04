@@ -12,7 +12,7 @@ public typealias ASN1Codable = ASN1Encodable & ASN1Decodable
 public protocol ASN1Encodable: Encodable { }
 public protocol ASN1Decodable: Decodable
 {
-	static func template() -> ASN1Template
+	static var template: ASN1Template { get }
 }
 
 public protocol ASN1CodingKey: CodingKey
