@@ -166,7 +166,7 @@ public class _ASN1Decoder: Decoder
 	///   not a keyed container.
 	public func container<Key>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key>
 	{
-		let container = ASN1KeyedDecodingContainer<Key>(referencing: self, wrapping: self.storage.current)
+		let container = try ASN1KeyedDecodingContainer<Key>(referencing: self, wrapping: self.storage.current)
 		return KeyedDecodingContainer(container)
 	}
 	
@@ -178,7 +178,7 @@ public class _ASN1Decoder: Decoder
 	///   not an unkeyed container.
 	public func unkeyedContainer() throws -> UnkeyedDecodingContainer
 	{
-		return ASN1UnkeyedDecodingContainer(referencing: self, wrapping: self.storage.current)
+		return try ASN1UnkeyedDecodingContainer(referencing: self, wrapping: self.storage.current)
 	}
 	
 	/// Returns the data stored in this decoder as represented in a container
@@ -197,7 +197,7 @@ public class _ASN1Decoder: Decoder
 
 extension _ASN1Decoder
 {
-	func extractValue(from data: Data, with expectedTags: [UInt32], consumed: inout Int) -> Data
+	func extractValue(from data: Data, with expectedTags: [UInt32], consumed: inout Int) throws -> Data
 	{
 //		return data.withUnsafeBytes { (p: UnsafeRawBufferPointer) in
 //			let pp = p.baseAddress!
@@ -206,14 +206,14 @@ extension _ASN1Decoder
 //		return Data()
 //		}
 		var len: Int = 0
-		let cons = checkTags(from: data, with: expectedTags, lastTlvLength: &len)
+		let cons = try checkTags(from: data, with: expectedTags, lastTlvLength: &len)
 		consumed = cons + len
 		let d = data.advanced(by: cons).prefix(len)
 		return d
 		
 	}
 	
-	func checkTags(from data: Data, with expectedTags: [UInt32], lastTlvLength: inout Int) -> ASN1DecoderConsumedValue
+	func checkTags(from data: Data, with expectedTags: [UInt32], lastTlvLength: inout Int) throws -> ASN1DecoderConsumedValue
 	{
 		var consumedMyself: Int = 0
 		var tagLen: Int = 0
@@ -242,14 +242,14 @@ extension _ASN1Decoder
 			
 			if tagLen == -1
 			{
-				assertionFailure("something wrong") // TODO: throw
+				throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: [], debugDescription: "Data corrupted"))
 			}
 			
 			tlvConstr = tlvConstructed(tag: data.first!)
 			
 			if tlvTag != tag
 			{
-				assertionFailure("Unexpected tag. Inappropriate.") // TODO: throw
+				throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: [], debugDescription: "Unexpected tag. Inappropriate."))
 			}
 			
 			lenOfLen = fetchLength(from: data.advanced(by: tagLen), isConstructed: tlvConstr, rLen: &tlvLen)
@@ -500,7 +500,7 @@ extension _ASN1Decoder: SingleValueDecodingContainer
 	public func decode(_ type: Int.Type) throws -> Int
 	{
 		var c: Int = 0
-		let data = extractValue(from: self.storage.current.data, with: self.storage.current.template.expectedTags, consumed: &c)
+		let data = try extractValue(from: self.storage.current.data, with: self.storage.current.template.expectedTags, consumed: &c)
 		
 		return try self.unbox(data, as: Int.self)!
 	}
@@ -601,14 +601,14 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContaine
 	// MARK: - Initialization
 	
 	/// Initializes `self` by referencing the given decoder and container.
-	init(referencing decoder: _ASN1Decoder, wrapping container: _ASN1Decoder.State)
+	init(referencing decoder: _ASN1Decoder, wrapping container: _ASN1Decoder.State) throws
 	{
 		self.decoder = decoder
 		self.codingPath = decoder.codingPath
 		
 		let ct = container
 		var c: Int = 0
-		ct.data = self.decoder.extractValue(from: container.data, with: container.template.expectedTags, consumed: &c)
+		ct.data = try self.decoder.extractValue(from: container.data, with: container.template.expectedTags, consumed: &c)
 		self.container = ct
 	}
 	
@@ -669,7 +669,7 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContaine
 		
 		let entry = self.container.data
 		var c: Int = 0
-		let data = self.decoder.extractValue(from: entry, with: k.template.expectedTags, consumed: &c)
+		let data = try self.decoder.extractValue(from: entry, with: k.template.expectedTags, consumed: &c)
 		self.container.data = c >= entry.count ? Data() : entry.advanced(by: c)
 		
 		guard let value = try self.decoder.unbox(data, as: Int.self) else {
@@ -845,7 +845,7 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContaine
 		
 		let entry = self.container.data
 		var c: Int = 0
-		let data = self.decoder.extractValue(from: entry, with: k.template.expectedTags, consumed: &c)
+		let data = try self.decoder.extractValue(from: entry, with: k.template.expectedTags, consumed: &c)
 		self.container.data = c >= entry.count ? Data() : entry.advanced(by: c)
 		
 		guard let value = try self.decoder.unbox(data, as: Data.self) else {
@@ -872,7 +872,7 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContaine
 		
 		let entry = self.container.data
 		var c: Int = 0
-		let data = self.decoder.extractValue(from: entry, with: k.template.expectedTags, consumed: &c)
+		let data = try self.decoder.extractValue(from: entry, with: k.template.expectedTags, consumed: &c)
 		self.container.data = c >= entry.count ? Data() : entry.advanced(by: c)
 		
 		guard let value = try self.decoder.unbox(entry.prefix(c), as: type) else {
@@ -885,14 +885,14 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContaine
 	public func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type, forKey key: Key) throws -> KeyedDecodingContainer<NestedKey>
 	{
 		assertionFailure("Hasn't implemented yet")
-		let container = ASN1KeyedDecodingContainer<NestedKey>(referencing: self.decoder, wrapping: self.container)
+		let container = try ASN1KeyedDecodingContainer<NestedKey>(referencing: self.decoder, wrapping: self.container)
 		return KeyedDecodingContainer(container)
 	}
 	
 	public func nestedUnkeyedContainer(forKey key: Key) throws -> UnkeyedDecodingContainer
 	{
 		assertionFailure("Hasn't implemented yet")
-		return ASN1UnkeyedDecodingContainer(referencing: self.decoder, wrapping: self.container)
+		return try ASN1UnkeyedDecodingContainer(referencing: self.decoder, wrapping: self.container)
 	}
 	
 	private func _superDecoder(forKey key: __owned CodingKey) throws -> Decoder
@@ -934,7 +934,7 @@ private struct ASN1UnkeyedDecodingContainer: UnkeyedDecodingContainer
 		return container.data.isEmpty || (container.data[0] == 0 && container.data[1] == 0)
 	}
 	
-	init(referencing decoder: _ASN1Decoder, wrapping container: _ASN1Decoder.State)
+	init(referencing decoder: _ASN1Decoder, wrapping container: _ASN1Decoder.State) throws
 	{
 		self.decoder = decoder
 		
@@ -943,7 +943,7 @@ private struct ASN1UnkeyedDecodingContainer: UnkeyedDecodingContainer
 		
 		let ct = container
 		var c: Int = 0
-		ct.data = self.decoder.extractValue(from: container.data, with: container.template.expectedTags, consumed: &c)
+		ct.data = try self.decoder.extractValue(from: container.data, with: container.template.expectedTags, consumed: &c)
 		self.container = ct
 	}
 	
@@ -1024,7 +1024,7 @@ private struct ASN1UnkeyedDecodingContainer: UnkeyedDecodingContainer
 		
 		let entry = self.container.data
 		var c: Int = 0
-		let data = self.decoder.extractValue(from: entry, with: t.template.expectedTags, consumed: &c)
+		let data = try self.decoder.extractValue(from: entry, with: t.template.expectedTags, consumed: &c)
 		self.container.data = c >= entry.count ? Data() : entry.advanced(by: c)
 		
 		guard let value = try self.decoder.unbox(entry.prefix(c), as: type) else {
@@ -1040,14 +1040,14 @@ private struct ASN1UnkeyedDecodingContainer: UnkeyedDecodingContainer
 	{
 		//TODO
 		assertionFailure("Hasn't implemented yet")
-		let container = ASN1KeyedDecodingContainer<NestedKey>(referencing: self.decoder, wrapping: self.container)
+		let container = try ASN1KeyedDecodingContainer<NestedKey>(referencing: self.decoder, wrapping: self.container)
 		return KeyedDecodingContainer(container)
 	}
 	
 	mutating func nestedUnkeyedContainer() throws -> UnkeyedDecodingContainer
 	{
 		assertionFailure("Hasn't implemented yet")
-		return ASN1UnkeyedDecodingContainer(referencing: self.decoder, wrapping: self.container)
+		return try ASN1UnkeyedDecodingContainer(referencing: self.decoder, wrapping: self.container)
 	}
 	
 	mutating func superDecoder() throws -> Decoder
