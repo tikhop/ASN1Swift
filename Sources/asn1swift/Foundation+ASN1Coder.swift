@@ -43,6 +43,8 @@ extension String.Encoding
 			return ASN1Template.universal(ASN1Identifier.Tag.ia5String)
 		case .utf8:
 			return ASN1Template.universal(ASN1Identifier.Tag.utf8String)
+		case .oid:
+			return ASN1Template.universal(ASN1Identifier.Tag.objectIdentifier)
 		default:
 			assertionFailure("Provide template for this encoding")
 			break
@@ -52,5 +54,7 @@ extension String.Encoding
 		return ASN1Template.universal(0)
 		
 	}
+	
+	static var oid: String.Encoding = String.Encoding(rawValue: 360)
 }
 

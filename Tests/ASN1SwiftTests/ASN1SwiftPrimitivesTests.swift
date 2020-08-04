@@ -10,6 +10,14 @@ import XCTest
 
 final class ASN1SwiftPrimitivesTests: XCTestCase
 {
+	func testDecoding_oid() throws
+	{
+		let bytes: [UInt8] = [0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x01]
+		
+		let asn1Decoder = ASN1Decoder()
+		let r = try! asn1Decoder.decode(String.self, from: Data(bytes), template: ASN1Template.universal(ASN1Identifier.Tag.objectIdentifier))
+		XCTAssert(r == "1.2.840.113549.1.7.1")
+	}
 	
 	func testDecoding_IA5String() throws
 	{

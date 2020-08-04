@@ -1429,7 +1429,7 @@ extension _ASN1Decoder
 	
 	func unbox(_ value: Data, as type: String.Type, encoding: String.Encoding) throws -> String?
 	{
-		return String(bytes: value, encoding: encoding)
+		return ASN1Serialization.readString(from: value, encoding: encoding)
 	}
 	
 	func unbox(_ value: Data, as type: String.Type) throws -> String?

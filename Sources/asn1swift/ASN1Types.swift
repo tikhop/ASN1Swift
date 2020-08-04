@@ -19,6 +19,8 @@ extension ASN1Tag
 	{
 		switch self
 		{
+		case ASN1Identifier.Tag.objectIdentifier:
+			return .oid
 		case ASN1Identifier.Tag.utf8String,
 			 ASN1Identifier.Tag.printableString,
 			 ASN1Identifier.Tag.numericString,
