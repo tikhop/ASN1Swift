@@ -18,6 +18,8 @@ open class ASN1Decoder
 		let userInfo: [CodingUserInfoKey : Any] = [:]
 	}
 	
+	public init() {}
+	
 	// MARK: - Decoding Values
 	
 	/// Decodes a top-level value of the given type from the given ASN1 representation.
