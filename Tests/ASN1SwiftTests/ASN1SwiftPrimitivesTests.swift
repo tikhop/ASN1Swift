@@ -10,6 +10,14 @@ import XCTest
 
 final class ASN1SwiftPrimitivesTests: XCTestCase
 {
+	func testDecoding_IA5String() throws
+	{
+		let bytes: [UInt8] = [0x16, 0x18, 0x34, 0x30, 0x30, 0x31, 0x2D, 0x30, 0x31, 0x2D, 0x30, 0x31, 0x54, 0x30, 0x30, 0x3A, 0x30, 0x30, 0x3A, 0x30, 0x30, 0x2B, 0x30, 0x30, 0x30, 0x30]
+		
+		let asn1Decoder = ASN1Decoder()
+		let r = try! asn1Decoder.decode(String.self, from: Data(bytes), template: ASN1Template.universal(ASN1Identifier.Tag.ia5String))
+		XCTAssert(r == "4001-01-01T00:00:00+0000")
+	}
 	
 	func testDecoding_utf8String() throws
 	{

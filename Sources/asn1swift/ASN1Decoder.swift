@@ -576,7 +576,7 @@ extension _ASN1Decoder: SingleValueDecodingContainer
 	{
 		let entry = self.storage.current.data
 		var c: Int = 0
-		let data = try self.extractValue(from: entry, with: type.template.expectedTags, consumed: &c)
+		let data = try self.extractValue(from: entry, with: self.storage.current.template.expectedTags, consumed: &c)
 		
 		// Shift data (position)
 		self.storage.current.data = c >= entry.count ? Data() : entry.advanced(by: c)
