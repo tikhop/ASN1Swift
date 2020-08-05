@@ -126,6 +126,7 @@ private struct ASN1Key: CodingKey
 
 public protocol ASN1DecoderProtocol: Decoder
 {
+	var dataToDecode: Data
 	func extractValueData() throws -> Data
 }
 
