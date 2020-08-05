@@ -977,8 +977,13 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : ASN1KeyedDecodingCont
 	
 	public func nestedUnkeyedContainer(forKey key: Key) throws -> UnkeyedDecodingContainer
 	{
-		assertionFailure("Hasn't implemented yet")
-		return try ASN1UnkeyedDecodingContainer(referencing: self.decoder, wrapping: self.container)
+		let entry = self.container.data
+		
+		var c: Int = 0
+		let _ = try dataToUnbox(forKey: key, consumed: &c)
+		
+		let state = _ASN1Decoder.State(data: entry.prefix(c), template: key.template)
+		return try ASN1UnkeyedDecodingContainer(referencing: self.decoder, wrapping: state)
 	}
 	
 	private func _superDecoder(forKey key: __owned CodingKey) throws -> Decoder
