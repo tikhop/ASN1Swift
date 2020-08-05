@@ -391,7 +391,7 @@ extension _PKCS7Container
 		}
 		
 		var version: Int
-		var alg: ASN1SkippedField
+		var alg: DigestAlgorithmIdentifiersContainer
 		var contentInfo: ContentInfo
 		var certificates: ASN1SkippedField
 		var signerInfos: ASN1SkippedField
@@ -411,7 +411,7 @@ extension _PKCS7Container
 				case .version:
 					return .universal(ASN1Identifier.Tag.integer)
 				case .alg:
-					return ASN1Template.universal(ASN1Identifier.Tag.set).constructed()
+					return DigestAlgorithmIdentifiersContainer.template
 				case .contentInfo:
 					return ContentInfo.template
 				case .certificates:
@@ -474,6 +474,58 @@ extension _PKCS7Container
 			}
 		}
 	}
+	
+	
+}
+
+struct DigestAlgorithmIdentifiersContainer: ASN1Decodable
+{
+	var items: [Item]
+	
+	init(from decoder: Decoder) throws
+	{
+		var container: UnkeyedDecodingContainer = try decoder.unkeyedContainer()
+		
+		var items: [Item] = []
+		
+		while !container.isAtEnd
+		{
+			items.append(try container.decode(Item.self))
+		}
+		
+		self.items = items
+	}
+	
+	static var template: ASN1Template { ASN1Template.universal(ASN1Identifier.Tag.set).constructed() }
+	
+	struct Item: ASN1Decodable
+	{
+		var algorithm: String
+		var parameters: ASN1Null
+		
+		enum CodingKeys: ASN1CodingKey
+		{
+			case algorithm
+			case parameters
+			
+			var template: ASN1Template
+			{
+				switch self
+				{
+				case .algorithm:
+					return .universal(ASN1Identifier.Tag.objectIdentifier)
+				case .parameters:
+					return .universal(ASN1Identifier.Tag.null)
+				}
+			}
+		}
+		
+		static var template: ASN1Template
+		{
+			return ASN1Template.universal(ASN1Identifier.Tag.sequence).constructed()
+		}
+		
+	}
 }
 
 /// Legacy In App Receipt
@@ -518,7 +570,7 @@ extension __PKCS7Container
 		}
 		
 		var version: Int
-		var alg: ASN1SkippedField
+		var alg: DigestAlgorithmIdentifiersContainer
 		var contentInfo: ContentInfo
 		
 		enum CodingKeys: ASN1CodingKey
@@ -534,7 +586,7 @@ extension __PKCS7Container
 				case .version:
 					return .universal(ASN1Identifier.Tag.integer)
 				case .alg:
-					return ASN1Template.universal(ASN1Identifier.Tag.set).constructed()
+					return DigestAlgorithmIdentifiersContainer.template
 				case .contentInfo:
 					return ContentInfo.template
 				}

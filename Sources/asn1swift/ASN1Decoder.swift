@@ -919,7 +919,12 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : ASN1KeyedDecodingCont
 	
 	public func decode(_ type: String.Type, forKey key: Key) throws -> String
 	{
-		return try decode(String.self, forKey: key, stringEncoding: key.template.stringEncoding)
+		guard let k = key as? ASN1CodingKey else
+		{
+			throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "key is not ASN1CodingKey"))
+		}
+		
+		return try decode(String.self, forKey: key, stringEncoding: k.template.stringEncoding)
 	}
 	
 	public func decodeData(forKey key: Key) throws -> Data
