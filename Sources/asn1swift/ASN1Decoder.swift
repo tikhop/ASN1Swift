@@ -904,7 +904,7 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : ASN1KeyedDecodingCont
 		}
 		
 		var c: Int = 0
-		let data = try self.decoder.extractValue(from: entry, with: k.template.expectedTags, consumed: &c)
+		let data = try self.decoder.extractValue(from: entry, with: stringEncoding.template.expectedTags, consumed: &c)
 		
 		// Shift data (position)
 		self.container.data = c >= entry.count ? Data() : entry.advanced(by: c)
@@ -919,7 +919,7 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : ASN1KeyedDecodingCont
 	
 	public func decode(_ type: String.Type, forKey key: Key) throws -> String
 	{
-		return try decode(String.self, forKey: key, stringEncoding: .utf8)
+		return try decode(String.self, forKey: key, stringEncoding: key.template.stringEncoding)
 	}
 	
 	public func decodeData(forKey key: Key) throws -> Data
