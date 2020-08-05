@@ -166,7 +166,8 @@ public class _ASN1Decoder: Decoder
 	///   not a keyed container.
 	public func container<Key>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key>
 	{
-		let container = try ASN1KeyedDecodingContainer<Key>(referencing: self, wrapping: self.storage.current)
+		let state = _ASN1Decoder.State(data: self.storage.current.data, template: self.storage.current.template)
+		let container = try ASN1KeyedDecodingContainer<Key>(referencing: self, wrapping: state)
 		return KeyedDecodingContainer(container)
 	}
 	
@@ -178,7 +179,8 @@ public class _ASN1Decoder: Decoder
 	///   not an unkeyed container.
 	public func unkeyedContainer() throws -> UnkeyedDecodingContainer
 	{
-		return try ASN1UnkeyedDecodingContainer(referencing: self, wrapping: self.storage.current)
+		let state = _ASN1Decoder.State(data: self.storage.current.data, template: self.storage.current.template)
+		return try ASN1UnkeyedDecodingContainer(referencing: self, wrapping: state)
 	}
 	
 	/// Returns the data stored in this decoder as represented in a container
@@ -189,6 +191,8 @@ public class _ASN1Decoder: Decoder
 	///   not a single value container.
 	public func singleValueContainer() throws -> SingleValueDecodingContainer
 	{
+//		let state = _ASN1Decoder.State(data: self.storage.current.data, template: self.storage.current.template)
+//		self.storage.push(container: state)
 		return self
 	}
 }
@@ -199,7 +203,6 @@ extension _ASN1Decoder
 {
 	func extractValue(from data: Data, with expectedTags: [ASN1Tag], consumed: inout Int) throws -> Data
 	{
-		
 		return try data.withUnsafeBytes { (p: UnsafeRawBufferPointer) in
 			
 			var pp = p.baseAddress!.assumingMemoryBound(to: UInt8.self)
