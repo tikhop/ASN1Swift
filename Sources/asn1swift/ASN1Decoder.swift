@@ -131,6 +131,11 @@ public protocol ASN1DecoderProtocol: Decoder
 
 extension _ASN1Decoder
 {
+	public var dataToDecode: Data
+	{
+		return self.storage.current.rawData
+	}
+	
 	public func extractValueData() throws -> Data
 	{
 		var c: Int = 0
