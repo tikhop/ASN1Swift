@@ -979,10 +979,15 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : ASN1KeyedDecodingCont
 	{
 		let entry = self.container.data
 		
+		guard let k = key as? ASN1CodingKey else
+		{
+			throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "key is not ASN1CodingKey"))
+		}
+		
 		var c: Int = 0
 		let _ = try dataToUnbox(forKey: key, consumed: &c)
 		
-		let state = _ASN1Decoder.State(data: entry.prefix(c), template: key.template)
+		let state = _ASN1Decoder.State(data: entry.prefix(c), template: k.template)
 		return try ASN1UnkeyedDecodingContainer(referencing: self.decoder, wrapping: state)
 	}
 	
