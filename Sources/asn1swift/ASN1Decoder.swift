@@ -617,7 +617,6 @@ extension _ASN1Decoder: SingleValueDecodingContainer
 	}
 	
 	public func decode<T : Decodable>(_ type: T.Type) throws -> T {
-		try expectNonNull(type)
 		return try self.unbox(self.storage.current.data, as: type)!
 	}
 	

@@ -10,6 +10,15 @@ import XCTest
 
 final class ASN1SwiftPrimitivesTests: XCTestCase
 {
+	func testDecoding_null() throws
+	{
+		let bytes: [UInt8] = [0x05, 0x00]
+		
+		let asn1Decoder = ASN1Decoder()
+		let r = try! asn1Decoder.decode(ASN1Null.self, from: Data(bytes))
+		XCTAssert(r is ASN1Null)
+	}
+	
 	func testDecoding_oid() throws
 	{
 		let bytes: [UInt8] = [0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x01]
