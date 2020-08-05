@@ -205,7 +205,7 @@ extension _ASN1Decoder
 	{
 		return try data.withUnsafeBytes { (p: UnsafeRawBufferPointer) in
 			
-			var pp = p.baseAddress!.assumingMemoryBound(to: UInt8.self)
+			let pp = p.baseAddress!.assumingMemoryBound(to: UInt8.self)
 			
 			//UnsafePointer<UInt8>()
 			var len: Int = 0

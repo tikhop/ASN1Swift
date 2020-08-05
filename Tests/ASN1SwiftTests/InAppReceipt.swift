@@ -392,7 +392,7 @@ extension _PKCS7Container
 		
 		var version: Int
 		var alg: ASN1SkippedField
-		var contentInfo: ASN1SkippedField
+		var contentInfo: ContentInfo
 		var certificates: ASN1SkippedField
 		var signerInfos: ASN1SkippedField
 		
