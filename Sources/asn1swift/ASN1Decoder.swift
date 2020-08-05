@@ -999,8 +999,21 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : ASN1KeyedDecodingCont
 	
 	private func _superDecoder(forKey key: __owned CodingKey) throws -> Decoder
 	{
-		assertionFailure("Hasn't implemented yet")
-		return _ASN1Decoder(referencing: self.container, at: self.decoder.codingPath, options: self.decoder.options)
+		guard let k = key as? ASN1CodingKey else
+		{
+			throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "key is not ASN1CodingKey"))
+		}
+		
+		let entry = self.container.data
+		var consumed: Int = 0
+		let _ = try self.decoder.extractValue(from: entry, with: k.template.expectedTags, consumed: &consumed)
+		
+		// Shift data (position)
+		self.container.data = consumed >= entry.count ? Data() : entry.advanced(by: consumed)
+		
+		let state = _ASN1Decoder.State(data: entry.prefix(consumed), template: k.template)
+		
+		return _ASN1Decoder(referencing: state, at: self.decoder.codingPath, options: self.decoder.options)
 	}
 	
 	public func superDecoder() throws -> Decoder
@@ -1011,7 +1024,6 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : ASN1KeyedDecodingCont
 	
 	public func superDecoder(forKey key: Key) throws -> Decoder
 	{
-		assertionFailure("Hasn't implemented yet")
 		return try _superDecoder(forKey: key)
 	}
 }
