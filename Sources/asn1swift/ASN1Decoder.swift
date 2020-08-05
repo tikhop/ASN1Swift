@@ -977,12 +977,10 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : ASN1KeyedDecodingCont
 	
 	public func nestedUnkeyedContainer(forKey key: Key) throws -> UnkeyedDecodingContainer
 	{
-		let entry = self.container.data
-		
 		var c: Int = 0
-		let _ = try dataToUnbox(forKey: key, consumed: &c)
+		let data = try dataToUnbox(forKey: key, consumed: &c)
 		
-		let state = _ASN1Decoder.State(data: entry.prefix(c), template: key.template)
+		let state = _ASN1Decoder.State(data: data, template: key.template)
 		return try ASN1UnkeyedDecodingContainer(referencing: self.decoder, wrapping: state)
 	}
 	
