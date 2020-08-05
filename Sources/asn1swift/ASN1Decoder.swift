@@ -124,8 +124,23 @@ private struct ASN1Key: CodingKey
 
 // MARK: _ASN1Decoder
 
-//private TODO
-public class _ASN1Decoder: Decoder
+public protocol ASN1DecoderProtocol: Decoder
+{
+	func extractValueData() throws -> Data
+}
+
+extension _ASN1Decoder
+{
+	public func extractValueData() throws -> Data
+	{
+		var c: Int = 0
+		let entry: Data = self.storage.current.rawData
+		let tags: [ASN1Tag] = self.storage.current.template.expectedTags
+		return try self.extractValue(from: entry, with: tags, consumed: &c)
+	}
+}
+//TODO: private
+public class _ASN1Decoder: ASN1DecoderProtocol
 {
 	class State
 	{
