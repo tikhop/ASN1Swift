@@ -5,6 +5,10 @@ import PackageDescription
 
 let package = Package(
     name: "ASN1Swift",
+	platforms: [.macOS(.v10_11),
+				.iOS(.v9),
+				.tvOS(.v9),
+				.watchOS("6.2")],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
         .library(
