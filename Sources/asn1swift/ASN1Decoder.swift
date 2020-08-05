@@ -323,7 +323,7 @@ extension _ASN1Decoder
 			step += 1
 		}
 				
-		lastTlvLength = tlvLen + (expectEOCTerminators << 1)
+		lastTlvLength = tlvLen
 		return consumedMyself
 	}
 	
@@ -911,7 +911,7 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContaine
 		let entry = self.container.data
 		
 		var c: Int = 0
-		let _ = try dataToUnbox(forKey: key, consumed: &c) // just consume and obtain `c`
+		let d = try dataToUnbox(forKey: key, consumed: &c) // just consume and obtain `c`
 		
 		guard let value = try self.decoder.unbox(entry.prefix(c), as: type) else
 		{

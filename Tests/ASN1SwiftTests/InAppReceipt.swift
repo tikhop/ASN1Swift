@@ -160,12 +160,12 @@ public struct InAppPurchase
 
 protocol _InAppReceipt: PKCS7
 {
-	var receiptPayload: InAppReceiptPayload { get }
+	//var receiptPayload: InAppReceiptPayload { get }
 }
 
 extension _InAppReceipt
 {
-	var receiptPayload: InAppReceiptPayload { return payload as! InAppReceiptPayload }
+	//var receiptPayload: InAppReceiptPayload { return payload as! InAppReceiptPayload }
 }
 
 extension InAppReceiptPayload: PKCS7Payload
@@ -378,10 +378,7 @@ class _PKCS7Container: _InAppReceipt
 
 extension _PKCS7Container
 {
-	var payload: PKCS7Payload
-	{
-		return signedData.contentInfo.payload.payload
-	}
+	
 }
 
 extension _PKCS7Container
@@ -395,13 +392,17 @@ extension _PKCS7Container
 		
 		var version: Int
 		var alg: ASN1SkippedField
-		var contentInfo: ContentInfo
+		var contentInfo: ASN1SkippedField
+		var certificates: ASN1SkippedField
+		var signerInfos: ASN1SkippedField
 		
 		enum CodingKeys: ASN1CodingKey
 		{
 			case version
 			case alg
 			case contentInfo
+			case certificates
+			case signerInfos
 			
 			var template: ASN1Template
 			{
@@ -413,6 +414,10 @@ extension _PKCS7Container
 					return ASN1Template.universal(ASN1Identifier.Tag.set).constructed()
 				case .contentInfo:
 					return ContentInfo.template
+				case .certificates:
+					return ASN1Template.contextSpecific(0).constructed().implicit(tag: ASN1Identifier.Tag.set)
+				case .signerInfos:
+					return ASN1Template.universal(ASN1Identifier.Tag.set).constructed()
 				}
 			}
 		}
@@ -606,7 +611,7 @@ struct PKC7
 
 protocol PKCS7: ASN1Decodable
 {
-	var payload: PKCS7Payload { get }
+//	/var payload: PKCS7Payload { get }
 }
 
 extension PKCS7
