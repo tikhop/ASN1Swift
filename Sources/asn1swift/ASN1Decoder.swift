@@ -9,6 +9,11 @@ import Foundation
 
 typealias ASN1DecoderConsumedValue = Int
 
+extension Decoder
+{
+	var rawData: Data { return Data() }
+}
+
 open class ASN1Decoder
 {
 	//fileprivate //TODO
@@ -125,11 +130,13 @@ public class _ASN1Decoder: Decoder
 	class State
 	{
 		var data: Data
+		var rawData: Data
 		var template: ASN1Template
 		
 		init(data: Data, template: ASN1Template)
 		{
 			self.data = data
+			self.rawData  = data
 			self.template = template
 		}
 		
@@ -616,7 +623,14 @@ extension CodingKey
 
 // MARK: ASN1KeyedDecodingContainer
 
-private struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContainerProtocol
+
+public protocol ASN1KeyedDecodingContainerProtocol: KeyedDecodingContainerProtocol
+{
+	var rawData: Data { get }
+}
+
+
+private struct ASN1KeyedDecodingContainer<K : CodingKey> : ASN1KeyedDecodingContainerProtocol
 {
 	typealias Key = K
 	
@@ -628,10 +642,10 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContaine
 	/// A reference to the container we're reading from.
 	private let container: _ASN1Decoder.State
 	
-	
-	
 	/// The path of coding keys taken to get to this point in decoding.
 	private(set) public var codingPath: [CodingKey]
+	
+	public var rawData: Data { return container.rawData }
 	
 	// MARK: - Initialization
 	
@@ -643,7 +657,9 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContaine
 		
 		let ct = container
 		var c: Int = 0
-		ct.data = try self.decoder.extractValue(from: container.data, with: container.template.expectedTags, consumed: &c)
+		let d = try self.decoder.extractValue(from: container.data, with: container.template.expectedTags, consumed: &c)
+		ct.data = d
+		ct.rawData = Data(d)
 		self.container = ct
 	}
 	
@@ -971,7 +987,12 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContaine
 
 // MARK: ASN1UnkeyedDecodingContainer
 
-private struct ASN1UnkeyedDecodingContainer: UnkeyedDecodingContainer
+public protocol ASN1UnkeyedDecodingContainerProtocol: UnkeyedDecodingContainer
+{
+	var rawData: Data { get }
+}
+
+private struct ASN1UnkeyedDecodingContainer: ASN1UnkeyedDecodingContainerProtocol
 {
 	private let decoder: _ASN1Decoder
 	private let container: _ASN1Decoder.State
@@ -981,6 +1002,9 @@ private struct ASN1UnkeyedDecodingContainer: UnkeyedDecodingContainer
 	
 	/// The index of the element we're about to decode.
 	public var currentIndex: Int
+	
+	/// Raw data
+	var rawData: Data { return container.rawData }
 	
 	var count: Int?
 	
@@ -998,7 +1022,9 @@ private struct ASN1UnkeyedDecodingContainer: UnkeyedDecodingContainer
 		
 		let ct = container
 		var c: Int = 0
-		ct.data = try self.decoder.extractValue(from: container.data, with: container.template.expectedTags, consumed: &c)
+		let d = try self.decoder.extractValue(from: container.data, with: container.template.expectedTags, consumed: &c)
+		ct.data = d
+		ct.rawData = Data(d)
 		self.container = ct
 	}
 	
