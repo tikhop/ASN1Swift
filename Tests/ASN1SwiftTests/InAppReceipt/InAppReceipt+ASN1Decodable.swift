@@ -132,29 +132,35 @@ extension InAppReceiptPayload: PKCS7Payload
 				}
 				
 				let octetString = attribute.value
-				let valueData = try asn1Decoder.decode(Data.self, from: octetString, template: .universal(ASN1Identifier.Tag.octetString))
 				
 				switch (receiptField)
 				{
 				case .bundleIdentifier:
+					let valueData = try asn1Decoder.decode(Data.self, from: octetString, template: .universal(ASN1Identifier.Tag.octetString))
 					bundleIdentifier = try asn1Decoder.decode(String.self, from: valueData)
 					bundleIdentifierData = octetString //valueData TODO: check this
 				case .appVersion:
+					let valueData = try asn1Decoder.decode(Data.self, from: octetString, template: .universal(ASN1Identifier.Tag.octetString))
 					appVersion = try asn1Decoder.decode(String.self, from: valueData)
 				case .opaqueValue:
-					opaqueValue = valueData
+					opaqueValue = octetString
 				case .receiptHash:
-					receiptHash = valueData
+					receiptHash = octetString
 				case .inAppPurchaseReceipt:
+					let valueData = try asn1Decoder.decode(Data.self, from: octetString, template: .universal(ASN1Identifier.Tag.octetString))
 					purchases.append(try asn1Decoder.decode(InAppPurchase.self, from: valueData))
 					break
 				case .originalAppVersion:
+					let valueData = try asn1Decoder.decode(Data.self, from: octetString, template: .universal(ASN1Identifier.Tag.octetString))
 					originalAppVersion = try asn1Decoder.decode(String.self, from: valueData)
 				case .expirationDate:
+					let valueData = try asn1Decoder.decode(Data.self, from: octetString, template: .universal(ASN1Identifier.Tag.octetString))
 					expirationDate = try asn1Decoder.decode(String.self, from: valueData, template: .universal(ASN1Identifier.Tag.ia5String))
 				case .receiptCreationDate:
+					let valueData = try asn1Decoder.decode(Data.self, from: octetString, template: .universal(ASN1Identifier.Tag.octetString))
 					receiptCreationDate = try asn1Decoder.decode(String.self, from: valueData, template: .universal(ASN1Identifier.Tag.ia5String))
 				case .environment:
+					let valueData = try asn1Decoder.decode(Data.self, from: octetString, template: .universal(ASN1Identifier.Tag.octetString))
 					environment = try asn1Decoder.decode(String.self, from: valueData)
 				default:
 					print("attribute.type = \(String(describing: attribute.type)))")
