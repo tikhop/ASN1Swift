@@ -40,8 +40,7 @@ open class ASN1Decoder
 		let t: ASN1Template = template ?? type.template
 		
 		let opt = EncodingOptions()
-		let decoder = _ASN1Decoder(referencing: _ASN1Decoder.State(data: data, template: t), options: opt)
-		
+		let decoder = _ASN1Decoder(referencing: data, with: t, options: opt)
 		
 		guard let value = try decoder.unbox(data, as: type) else
 		{
@@ -52,19 +51,8 @@ open class ASN1Decoder
 	}
 }
 
-private struct ASN1DecodingStorage
+extension _ASN1Decoder.Context
 {
-	// MARK: Properties
-	
-	/// The container stack.
-	/// Elements may be any one of the ASN1 types (NSNull, NSNumber, String, Array, [String : Any]).
-	private(set) var containers: [_ASN1Decoder.State] = []
-	
-	// MARK: - Initialization
-	
-	/// Initializes `self` with no containers.
-	init() {}
-	
 	// MARK: - Modifying the Stack
 	
 	var count: Int
@@ -92,6 +80,12 @@ private struct ASN1DecodingStorage
 		precondition(!self.containers.isEmpty, "Empty container stack.")
 		self.containers.removeLast()
 	}
+}
+
+private struct ASN1DecodingContext
+{
+	
+	
 }
 
 private struct ASN1Key: CodingKey
@@ -148,11 +142,47 @@ extension _ASN1Decoder
 //TODO: private
 public class _ASN1Decoder: ASN1DecoderProtocol
 {
+	fileprivate struct Context
+	{
+		// MARK: Properties
+		
+		/// Data we are decoding
+		private var data: Data
+		
+		/// The container stack.
+		/// Elements may be any one of the ASN1 types (NSNull, NSNumber, String, Array, [String : Any]).
+		private(set) var containers: [_ASN1Decoder.State] = []
+		
+		// MARK: - Initialization
+		
+		/// Initializes `self` with no containers.
+		init(data: Data)
+		{
+			self.data = data
+		}
+	}
+	
 	class State
 	{
 		var data: Data
+		var _data: UnsafePointer<UInt8>!
 		var rawData: Data
+		
+		var _rawData: Data { return Data(rawDataBuffer[position..<end]) }
+		var rawDataBuffer: UnsafeRawBufferPointer!
+		
 		var template: ASN1Template
+		
+		var consumed: Int = 0
+		var pending: Int = 0
+		
+		var contentsLength: Int = 0
+		
+		
+		var position: Int = 0
+		var end: Int { position + contentsLength }
+		
+		var depth: Int = 0
 		
 		init(data: Data, template: ASN1Template)
 		{
@@ -161,11 +191,7 @@ public class _ASN1Decoder: ASN1DecoderProtocol
 			self.template = template
 		}
 		
-		var contentsLength: UInt = 0
-		var pending: UInt = 0
-		var consumed: UInt = 0
 		
-		var depth: Int = 0
 	}
 	
 	public var codingPath: [CodingKey] = []
@@ -173,17 +199,26 @@ public class _ASN1Decoder: ASN1DecoderProtocol
 	public var userInfo: [CodingUserInfoKey: Any] { return options.userInfo }
 	
 	var options: ASN1Decoder.EncodingOptions!
-	private var storage: ASN1DecodingStorage = ASN1DecodingStorage()
 	
-	fileprivate init(referencing state: _ASN1Decoder.State, at codingPath: [CodingKey] = [], options: ASN1Decoder.EncodingOptions)
+	private var storage: Context
+	
+	fileprivate init(referencing data: Data, with template: ASN1Template, at codingPath: [CodingKey] = [], options: ASN1Decoder.EncodingOptions)
 	{
-		self.storage = ASN1DecodingStorage()
+		
+		self.storage = Context(data: data)
+		
+		let state = _ASN1Decoder.State(data: data, template: template)
 		self.storage.push(container: state)
+		
+		
 		self.codingPath = codingPath
 		self.options = options
 	}
 	
-	public init() {}
+	public init()
+	{
+		self.storage = Context(data: Data())
+	}
 	
 	/// Returns the data stored in this decoder as represented in a container
 	/// keyed by the given key type.
@@ -229,13 +264,36 @@ public class _ASN1Decoder: ASN1DecoderProtocol
 
 extension _ASN1Decoder
 {
+	func extractTLSize(from data: Data, with expectedTags: [ASN1Tag]) -> Int
+	{
+		return data.withUnsafeBytes { (p: UnsafeRawBufferPointer) in
+			
+			var ptr = p.baseAddress!.assumingMemoryBound(to: UInt8.self)
+			let size = data.count
+			var tlvTag: ASN1Tag  = 0
+			let tlvConstr: Bool = tlvConstructed(tag: ptr[0])
+			var tlvLen: Int = 0 // Lenght of inner value
+			var r: Int = 0
+
+			for tag in expectedTags
+			{
+				let tagLen = fetchTag(from: ptr, size: size, to: &tlvTag)
+				let lenOfLen = fetchLength(from: ptr + 1, size: size - 1, isConstructed: tlvConstr, rLen: &tlvLen)
+				ptr += tagLen + lenOfLen
+				r += tagLen + lenOfLen
+			}
+
+			return r
+		}
+	}
+	
 	func extractValue(from data: Data, with expectedTags: [ASN1Tag], consumed: inout Int) throws -> Data
 	{
 		return try data.withUnsafeBytes { (p: UnsafeRawBufferPointer) in
 			
 			let pp = p.baseAddress!.assumingMemoryBound(to: UInt8.self)
 			
-			//UnsafePointer<UInt8>()
+
 			var len: Int = 0
 			let cons = try checkTags(from: pp, size: data.count, with: expectedTags, lastTlvLength: &len)
 			consumed = cons + len
@@ -272,7 +330,7 @@ extension _ASN1Decoder
 		var limitLen: Int = -1
 		var expectEOCTerminators: Int = 0
 		
-		//var data: Data = data
+
 		var step: Int = 0
 		
 		for tag in expectedTags
@@ -330,19 +388,7 @@ extension _ASN1Decoder
 //				assertionFailure("Outer TLV is \(limitLen) and inner is \(tlvLen)") // TODO: throw
 //				return -1
 //			}
-			
-//			if tagLen + lenOfLen == size //data.count
-//			{
-//				data = Data()
-//			}else{
-//				data = data.advanced(by:
-//
-//				if tlvLen != 0
-//				{
-//					data = data.prefix(tlvLen)
-//				}
-//			}
-			
+						
 			ptr += (tagLen + lenOfLen)
 			consumedMyself += (tagLen + lenOfLen)
 			
@@ -373,8 +419,6 @@ extension _ASN1Decoder
 		var val: UInt = 0
 		var skipped: Int = 2
 		
-		//TODO: do not allocate new data, use slice instead
-		//let d = data.advanced(by: 1)
 		for i in 1..<size
 		{
 			if skipped > size { break }
@@ -675,12 +719,12 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : ASN1KeyedDecodingCont
 		self.decoder = decoder
 		self.codingPath = decoder.codingPath
 		
-		let ct = container
-		var c: Int = 0
-		let d = try self.decoder.extractValue(from: container.data, with: container.template.expectedTags, consumed: &c)
-		ct.data = d
-		ct.rawData = Data(d)
-		self.container = ct
+		let tlLength = self.decoder.extractTLSize(from: container.data, with: container.template.expectedTags)
+		let data = container.data.advanced(by: tlLength)
+		container.data = data
+		container.rawData = Data(data)
+		
+		self.container = container
 	}
 	
 	// MARK: - KeyedDecodingContainerProtocol Methods
@@ -1020,9 +1064,9 @@ private struct ASN1KeyedDecodingContainer<K : CodingKey> : ASN1KeyedDecodingCont
 		// Shift data (position)
 		self.container.data = consumed >= entry.count ? Data() : entry.advanced(by: consumed)
 		
-		let state = _ASN1Decoder.State(data: entry.prefix(consumed), template: k.template)
+		//let state = _ASN1Decoder.State(data: entry.prefix(consumed), template: k.template)
 		
-		return _ASN1Decoder(referencing: state, at: self.decoder.codingPath, options: self.decoder.options)
+		return _ASN1Decoder(referencing: entry.prefix(consumed), with: k.template, at: self.decoder.codingPath, options: self.decoder.options)
 	}
 	
 	public func superDecoder() throws -> Decoder
@@ -1072,12 +1116,12 @@ private struct ASN1UnkeyedDecodingContainer: ASN1UnkeyedDecodingContainerProtoco
 		self.codingPath = decoder.codingPath
 		self.currentIndex = 0
 		
-		let ct = container
-		var c: Int = 0
-		let d = try self.decoder.extractValue(from: container.data, with: container.template.expectedTags, consumed: &c)
-		ct.data = d
-		ct.rawData = Data(d)
-		self.container = ct
+		let tlLength = self.decoder.extractTLSize(from: container.data, with: container.template.expectedTags)
+		let data = container.data.advanced(by: tlLength)
+		container.data = data
+		container.rawData = Data(data)
+		
+		self.container = container
 	}
 	
 	mutating func decodeNil() throws -> Bool

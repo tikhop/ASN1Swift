@@ -10,8 +10,6 @@ import XCTest
 
 final class ASN1SwiftTLVTests: XCTestCase
 {
-	
-	
 	func testLengthFetching_simpleForm() throws
 	{
 		let bytes = Data([0x04])

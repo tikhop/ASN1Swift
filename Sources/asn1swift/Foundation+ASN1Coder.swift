@@ -58,3 +58,17 @@ extension String.Encoding
 	static var oid: String.Encoding = String.Encoding(rawValue: 360)
 }
 
+extension Data
+{
+	init(pointer: UnsafePointer<UInt8>, size: Int)
+	{
+		let ptr = UnsafeMutableRawPointer(mutating: pointer)
+		
+		if size == 0
+		{
+			self = Data()
+		}else{
+			self = Data(bytesNoCopy: ptr, count: size, deallocator: .none)
+		}
+	}
+}
