@@ -42,7 +42,7 @@ internal struct ASN1UnkeyedDecodingContainer: ASN1UnkeyedDecodingContainerProtoc
 		self.codingPath = decoder.codingPath
 		self.currentIndex = 0
 		
-		let tlLength = self.decoder.extractTLSize(from: container.data, with: container.template.expectedTags)
+		let tlLength = extractTLSize(from: container.data, with: container.template.expectedTags)
 		let data = container.data.advanced(by: tlLength)
 		container.data = data
 		container.rawData = Data(data)
@@ -178,7 +178,7 @@ internal struct ASN1UnkeyedDecodingContainer: ASN1UnkeyedDecodingContainerProtoc
 		
 		let entry = self.container.data
 		var c: Int = 0
-		let data = try self.decoder.extractValue(from: entry, with: t.template.expectedTags, consumed: &c)
+		let data = try extractValue(from: entry, with: t.template.expectedTags, consumed: &c)
 		
 		// Shift data (position)
 		self.container.data = c >= entry.count ? Data() : entry.advanced(by: c)
@@ -204,7 +204,7 @@ internal struct ASN1UnkeyedDecodingContainer: ASN1UnkeyedDecodingContainerProtoc
 		
 		let entry = self.container.data
 		var c: Int = 0
-		let data = try self.decoder.extractValue(from: entry, with: t.template.expectedTags, consumed: &c)
+		let data = try extractValue(from: entry, with: t.template.expectedTags, consumed: &c)
 		self.container.data = c >= entry.count ? Data() : entry.advanced(by: c)
 		
 		guard let value = try self.decoder.unbox(entry.prefix(c), as: type) else {

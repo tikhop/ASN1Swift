@@ -34,7 +34,7 @@ internal struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContain
 		self.decoder = decoder
 		self.codingPath = decoder.codingPath
 		
-		let tlLength = self.decoder.extractTLSize(from: container.data, with: container.template.expectedTags)
+		let tlLength = extractTLSize(from: container.data, with: container.template.expectedTags)
 		let data = container.data.advanced(by: tlLength)
 		container.data = data
 		container.rawData = Data(data)
@@ -76,7 +76,7 @@ internal struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContain
 		}
 		
 		let entry = self.container.data
-		let data = Data() //self.decoder.extractValue(from: entry, with: k.template.expectedTags)
+		let data = Data() //extractValue(from: entry, with: k.template.expectedTags)
 		self.container.data = data
 		
 		guard let value = try self.decoder.unbox(data, as: Bool.self) else {
@@ -99,7 +99,7 @@ internal struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContain
 		
 		let entry = self.container.data
 		var c: Int = 0
-		let data = try self.decoder.extractValue(from: entry, with: k.template.expectedTags, consumed: &c)
+		let data = try extractValue(from: entry, with: k.template.expectedTags, consumed: &c)
 		self.container.data = c >= entry.count ? Data() : entry.advanced(by: c)
 		
 		guard let value = try self.decoder.unbox(data, as: Int.self) else {
@@ -258,7 +258,7 @@ internal struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContain
 		defer { self.decoder.codingPath.removeLast() }
 		
 		var c: Int = 0
-		let data = try self.decoder.extractValue(from: entry, with: stringEncoding.template.expectedTags, consumed: &c)
+		let data = try extractValue(from: entry, with: stringEncoding.template.expectedTags, consumed: &c)
 		
 		// Shift data (position)
 		self.container.data = c >= entry.count ? Data() : entry.advanced(by: c)
@@ -329,7 +329,7 @@ internal struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContain
 		}
 		
 		let entry = self.container.data
-		let data = try self.decoder.extractValue(from: entry, with: k.template.expectedTags, consumed: &consumed)
+		let data = try extractValue(from: entry, with: k.template.expectedTags, consumed: &consumed)
 		
 		// Shift data (position)
 		self.container.data = consumed >= entry.count ? Data() : entry.advanced(by: consumed)
@@ -369,7 +369,7 @@ internal struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContain
 		
 		let entry = self.container.data
 		var consumed: Int = 0
-		let _ = try self.decoder.extractValue(from: entry, with: k.template.expectedTags, consumed: &consumed)
+		let _ = try extractValue(from: entry, with: k.template.expectedTags, consumed: &consumed)
 		
 		// Shift data (position)
 		self.container.data = consumed >= entry.count ? Data() : entry.advanced(by: consumed)

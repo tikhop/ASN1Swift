@@ -19,8 +19,7 @@ final class ASN1SwiftTLVTests: XCTestCase
 			let pp = p.baseAddress!.assumingMemoryBound(to: UInt8.self)
 			
 			var r: Int = 0
-			let dec = _ASN1Decoder()
-			let consumed = dec.fetchLength(from: pp, size: 1, isConstructed: false, rLen: &r)
+			let consumed = fetchLength(from: pp, size: 1, isConstructed: false, rLen: &r)
 			
 			XCTAssert(r == 4)
 			XCTAssert(consumed == 1)
@@ -36,8 +35,7 @@ final class ASN1SwiftTLVTests: XCTestCase
 			let pp = p.baseAddress!.assumingMemoryBound(to: UInt8.self)
 			
 			var r: Int = 0
-			let dec = _ASN1Decoder()
-			let consumed = dec.fetchLength(from: pp, size: bytes.count, isConstructed: false, rLen: &r)
+			let consumed = fetchLength(from: pp, size: bytes.count, isConstructed: false, rLen: &r)
 			
 			XCTAssert(r == 79083)
 			XCTAssert(consumed == 4)
@@ -53,8 +51,7 @@ final class ASN1SwiftTLVTests: XCTestCase
 			let pp = p.baseAddress!.assumingMemoryBound(to: UInt8.self)
 			
 			var r: Int = 0
-			let dec = _ASN1Decoder()
-			let consumed = dec.fetchLength(from: pp, size: bytes.count, isConstructed: true, rLen: &r)
+			let consumed = fetchLength(from: pp, size: bytes.count, isConstructed: true, rLen: &r)
 			
 			XCTAssert(r == -1)
 			XCTAssert(consumed == 1)
@@ -69,9 +66,8 @@ final class ASN1SwiftTLVTests: XCTestCase
 			
 			let pp = p.baseAddress!.assumingMemoryBound(to: UInt8.self)
 			
-			let dec = _ASN1Decoder()
 			var l: Int = 0
-			let consumed = try! dec.checkTags(from: pp, size: bytes.count, with: [ASN1Identifier.Tag.sequence | ASN1Identifier.Modifiers.constructed], lastTlvLength: &l)
+			let consumed = try! checkTags(from: pp, size: bytes.count, with: [ASN1Identifier.Tag.sequence | ASN1Identifier.Modifiers.constructed], lastTlvLength: &l)
 			
 			XCTAssert(consumed == 5)
 		}
@@ -85,9 +81,8 @@ final class ASN1SwiftTLVTests: XCTestCase
 			
 			let pp = p.baseAddress!.assumingMemoryBound(to: UInt8.self)
 			
-			let dec = _ASN1Decoder()
 			var l: Int = 0
-			let consumed = try! dec.checkTags(from: pp, size: bytes.count, with: [ASN1Identifier.Modifiers.contextSpecific | ASN1Identifier.Modifiers.constructed, ASN1Identifier.Tag.integer], lastTlvLength: &l)
+			let consumed = try! checkTags(from: pp, size: bytes.count, with: [ASN1Identifier.Modifiers.contextSpecific | ASN1Identifier.Modifiers.constructed, ASN1Identifier.Tag.integer], lastTlvLength: &l)
 			
 			XCTAssert(consumed == 4)
 		}
@@ -102,8 +97,7 @@ final class ASN1SwiftTLVTests: XCTestCase
 			let pp = p.baseAddress!.assumingMemoryBound(to: UInt8.self)
 			
 			var r: ASN1Tag = 0
-			let dec = _ASN1Decoder()
-			let consumed = try! dec.fetchTag(from: pp, size: bytes.count, to: &r)
+			let consumed = try! fetchTag(from: pp, size: bytes.count, to: &r)
 			
 			XCTAssert(r == ASN1Identifier.Tag.integer)
 			XCTAssert(consumed == bytes.count)
@@ -119,8 +113,7 @@ final class ASN1SwiftTLVTests: XCTestCase
 			let pp = p.baseAddress!.assumingMemoryBound(to: UInt8.self)
 			
 			var r: ASN1Tag = 0
-			let dec = _ASN1Decoder()
-			let consumed = try! dec.fetchTag(from: pp, size: bytes.count, to: &r)
+			let consumed = try! fetchTag(from: pp, size: bytes.count, to: &r)
 			
 			XCTAssert(r == 8)
 			XCTAssert(consumed == 2)
