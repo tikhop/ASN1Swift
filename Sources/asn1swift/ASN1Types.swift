@@ -10,12 +10,11 @@ import Foundation
 
 public typealias ASN1Tag = UInt8
 public typealias ASN1SkippedField = Data
+
 public struct ASN1Null: ASN1Decodable
 {
 	public static var template: ASN1Template { ASN1Template.universal(ASN1Identifier.Tag.null) }
 }
-
-
 
 extension ASN1Tag
 {

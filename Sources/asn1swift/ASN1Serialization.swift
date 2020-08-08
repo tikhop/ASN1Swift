@@ -10,69 +10,73 @@ import Foundation
 
 class ASN1Object
 {
-	var tag: ASN1Tag = 0
-	var isConstruscted: Bool = false
 	var valueData: Data { Data(pointer: valuePtr, size: valueLength) }
+	var rawData: Data { Data(pointer: dataPtr, size: dataLength) }
+	var template: ASN1Template
 	
 	var dataPtr: UnsafePointer<UInt8>
-	private var dataLength: Int
+	var dataLength: Int
 	
+	var valuePtr: UnsafePointer<UInt8> { return dataPtr + valuePosition }
+	var valueLength: Int
 	private var valuePosition: Int
-	private var valuePtr: UnsafePointer<UInt8> { return dataPtr + valuePosition }
-	private var valueLength: Int { return dataLength - valuePosition }
 	
-	private var template: ASN1Template
-	private var buffer: UnsafeBufferPointer<UInt8>
-	
-	init(buffer: UnsafeBufferPointer<UInt8>, length: Int, valuePosition: Int, template: ASN1Template)
+	init(data: UnsafePointer<UInt8>, dataLength: Int, valuePosition: Int, valueLength: Int, template: ASN1Template)
 	{
-		self.buffer = buffer
-		self.dataPtr = buffer.baseAddress!
-		self.dataLength = length
+		self.dataPtr = data
+		self.dataLength = dataLength
 		self.valuePosition = valuePosition
+		self.valueLength = valueLength
 		self.template = template
 	}
-	
-//	init(dataPtr: UnsafePointer<UInt8>, length: Int, valuePosition: Int, template: ASN1Template)
-//	{
-//		self.dataPtr = dataPtr
-//		self.dataLength = length
-//		self.valuePosition = valuePosition
-//		self.template = template
-//	}
 }
 
 struct ASN1Deserializer
 {
-	static func parse(input: Data, using template: ASN1Template) throws -> ASN1Object
-	{
-		let buffer: UnsafeMutableBufferPointer<UInt8> = UnsafeMutableBufferPointer.allocate(capacity: input.count)
-		let r = input.copyBytes(to: buffer)
-		
-		let ptr = buffer.baseAddress!
-		var v: UnsafePointer<UInt8>!
-		var vLength: Int = 0
-		let _ = try extractValue(from: ptr, length: r, with: template.expectedTags, value: &v, valueLength: &vLength)
-		
-		return ASN1Object(buffer: UnsafeBufferPointer(buffer), length: input.count, valuePosition: 2, template: template)
-	}
+//	static func parse(input: Data, using template: ASN1Template) throws -> ASN1Object
+//	{
+//		let buffer: UnsafeMutableBufferPointer<UInt8> = UnsafeMutableBufferPointer.allocate(capacity: input.count)
+//		let r = input.copyBytes(to: buffer)
+//		
+//		let ptr = buffer.baseAddress!
+//		var v: UnsafePointer<UInt8>!
+//		var vLength: Int = 0
+//		let c = try extractValue(from: ptr, length: r, with: template.expectedTags, value: &v, valueLength: &vLength)
+//		
+//		return ASN1Object(buffer: UnsafeBufferPointer(buffer), valuePosition: c, valueLength: vLength, template: template)
+//	}
 }
 
 class ASN1Serialization
 {
-	class func ASN1Object(with data: Data, using template: ASN1Template) throws -> ASN1Object
+//	class func ASN1Object(with data: Data, using template: ASN1Template) throws -> ASN1Object
+//	{
+//		return try ASN1Deserializer.parse(input: data, using: template)
+//	}
+//	
+	class func ASN1Object(with data: UnsafePointer<UInt8>, length: Int, using template: ASN1Template) throws -> ASN1Object
 	{
-		return try ASN1Deserializer.parse(input: data, using: template)
+		let ptr = data
+		var v: UnsafePointer<UInt8>!
+		var vLength: Int = 0
+		let c = try extractValue(from: ptr, length: length, with: template.expectedTags, value: &v, valueLength: &vLength)
+		
+		return ASN1Swift.ASN1Object(data: data, dataLength: c + vLength, valuePosition: c, valueLength: vLength, template: template)
+	}
+	
+	static func readInt(from obj: ASN1Object) -> Int
+	{
+		return readInt(from: obj.valueData)
 	}
 	
 	@inlinable
 	@inline(__always)
-	static func readInt(from data: Data, l: Int) -> Int
+	static func readInt(from data: Data) -> Int
 	{
 		var r: UInt64 = 0
 		
 		let start = data.startIndex
-		let end = start + l
+		let end = start + data.endIndex
 		
 		for i in start..<end
 		{
@@ -86,6 +90,11 @@ class ASN1Serialization
 		}
 		
 		return Int(r)
+	}
+	
+	static func readString(from data: ASN1Object, encoding: String.Encoding) -> String?
+	{
+		return readString(from: data.valueData, encoding: encoding)
 	}
 	
 	static func readString(from data: Data, encoding: String.Encoding) -> String?

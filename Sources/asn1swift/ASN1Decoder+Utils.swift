@@ -167,8 +167,7 @@ func checkTags(from ptr: UnsafePointer<UInt8>, size: Int, with expectedTags: [AS
 		
 		if size > limitLen
 		{
-		
-			//size = limitLen
+			size = limitLen
 		}
 		
 		step += 1

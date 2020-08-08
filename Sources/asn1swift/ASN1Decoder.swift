@@ -34,53 +34,22 @@ open class ASN1Decoder
 	{
 		let t: ASN1Template = template ?? type.template
 		
-//		let buffer: UnsafeMutableBufferPointer<UInt8> = UnsafeMutableBufferPointer.allocate(capacity: data.count)
-//		let r: Int = data.copyBytes(to: buffer)
-//		
-//		let ptr: UnsafePointer<UInt8> = UnsafePointer(buffer.baseAddress!)
-//		let size: Int = extractTLLength(from: ptr, length: r, expectedTags: t.expectedTags)
-//		let top = ASN1Object(buffer: UnsafeBufferPointer(buffer), length: r, valuePosition: size, template: t)
-		
-		let opt = EncodingOptions()
-		let decoder = _ASN1Decoder(referencing: data, with: t, options: opt)
-		
-		guard let value = try decoder.unbox(data, as: type) else
-		{
-			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: [], debugDescription: "The given data did not contain a top-level value."))
+		return try data.withUnsafeBytes { (p) throws -> T in
+			
+			let ptr: UnsafePointer<UInt8> = p.baseAddress!.assumingMemoryBound(to: UInt8.self)
+			let top = try ASN1Serialization.ASN1Object(with: ptr, length: data.count, using: t)
+			
+			let opt = EncodingOptions()
+			let decoder = _ASN1Decoder(referencing: top, options: opt)
+			
+			guard let value = try decoder.unbox(top, as: type) else
+			{
+				throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: [], debugDescription: "The given data did not contain a top-level value."))
+			}
+			
+			return value
 		}
 		
-		return value
-	}
-}
-
-extension _ASN1Decoder.Context
-{
-	// MARK: - Modifying the Stack
-	
-	var count: Int
-	{
-		return self.containers.count
-	}
-	
-	var isTop: Bool
-	{
-		return count == 1
-	}
-	var current: _ASN1Decoder.State
-	{
-		precondition(!self.containers.isEmpty, "Empty container stack.")
-		return self.containers.last!
-	}
-	
-	mutating func push(container: __owned _ASN1Decoder.State)
-	{
-		self.containers.append(container)
-	}
-	
-	mutating func popContainer()
-	{
-		precondition(!self.containers.isEmpty, "Empty container stack.")
-		self.containers.removeLast()
 	}
 }
 
@@ -138,37 +107,69 @@ extension _ASN1Decoder
 //TODO: private
 class _ASN1Decoder: ASN1DecoderProtocol
 {
-	internal struct Context
+	internal struct Storage
 	{
 		// MARK: Properties
 		
-		/// Data we are decoding
-		private var data: Data
-		
 		/// The container stack.
 		/// Elements may be any one of the ASN1 types (NSNull, NSNumber, String, Array, [String : Any]).
-		private(set) var containers: [_ASN1Decoder.State] = []
+		private(set) var containers: [ASN1Object] = []
 		
-		// MARK: - Initialization
+		// MARK: - Modifying the Stack
 		
-		/// Initializes `self` with no containers.
-		init(data: Data)
+		var count: Int
 		{
-			self.data = data
+			return self.containers.count
+		}
+		
+		var isTop: Bool
+		{
+			return count == 1
+		}
+		var current: ASN1Object
+		{
+			precondition(!self.containers.isEmpty, "Empty container stack.")
+			return self.containers.last!
+		}
+		
+		mutating func push(container: __owned ASN1Object)
+		{
+			self.containers.append(container)
+		}
+		
+		mutating func popContainer()
+		{
+			precondition(!self.containers.isEmpty, "Empty container stack.")
+			self.containers.removeLast()
 		}
 	}
 	
 	class State
 	{
-		var data: Data
-		var rawData: Data
-		var template: ASN1Template
+		var dataPtr: UnsafePointer<UInt8>
+		var consumedMyself: Int
+		var left: Int
 		
-		init(data: Data, template: ASN1Template)
+		var asn1Obj: ASN1Object
+		
+		init(obj: ASN1Object)
 		{
-			self.data = data
-			self.rawData  = data
-			self.template = template
+			self.asn1Obj = obj
+			self.dataPtr = obj.valuePtr
+			self.consumedMyself = 0
+			self.left = obj.valueLength
+		}
+		
+		var isAtEnd: Bool
+		{
+			return left == 0 || (dataPtr[0] == 0 && dataPtr[1] == 0)
+		}
+		
+		func advance(_ numBytes: Int)
+		{
+			dataPtr += numBytes
+			consumedMyself += numBytes
+			left -= numBytes
 		}
 	}
 	
@@ -178,16 +179,13 @@ class _ASN1Decoder: ASN1DecoderProtocol
 	
 	var options: ASN1Decoder.EncodingOptions!
 	
-	internal var storage: Context
+	internal var storage: Storage
 	
-	internal init(referencing data: Data, with template: ASN1Template, at codingPath: [CodingKey] = [], options: ASN1Decoder.EncodingOptions)
+	
+	internal init(referencing asn1Object: ASN1Object, at codingPath: [CodingKey] = [], options: ASN1Decoder.EncodingOptions)
 	{
-		
-		self.storage = Context(data: data)
-		
-		let state = _ASN1Decoder.State(data: data, template: template)
-		self.storage.push(container: state)
-		
+		self.storage = Storage()
+		self.storage.push(container: asn1Object)
 		
 		self.codingPath = codingPath
 		self.options = options
@@ -195,7 +193,7 @@ class _ASN1Decoder: ASN1DecoderProtocol
 	
 	public init()
 	{
-		self.storage = Context(data: Data())
+		self.storage = Storage()
 	}
 	
 	/// Returns the data stored in this decoder as represented in a container
@@ -207,8 +205,7 @@ class _ASN1Decoder: ASN1DecoderProtocol
 	///   not a keyed container.
 	public func container<Key>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key>
 	{
-		let state = _ASN1Decoder.State(data: self.storage.current.data, template: self.storage.current.template)
-		let container = try ASN1KeyedDecodingContainer<Key>(referencing: self, wrapping: state)
+		let container = try ASN1KeyedDecodingContainer<Key>(referencing: self, wrapping: self.storage.current)
 		return KeyedDecodingContainer(container)
 	}
 	
@@ -220,8 +217,7 @@ class _ASN1Decoder: ASN1DecoderProtocol
 	///   not an unkeyed container.
 	public func unkeyedContainer() throws -> UnkeyedDecodingContainer
 	{
-		let state = _ASN1Decoder.State(data: self.storage.current.data, template: self.storage.current.template)
-		return try ASN1UnkeyedDecodingContainer(referencing: self, wrapping: state)
+		return try ASN1UnkeyedDecodingContainer(referencing: self, wrapping: self.storage.current)
 	}
 	
 	/// Returns the data stored in this decoder as represented in a container
