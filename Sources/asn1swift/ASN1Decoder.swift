@@ -98,10 +98,7 @@ extension _ASN1Decoder
 	
 	public func extractValueData() throws -> Data
 	{
-		var c: Int = 0
-		let entry: Data = self.storage.current.rawData
-		let tags: [ASN1Tag] = self.storage.current.template.expectedTags
-		return try extractValue(from: entry, with: tags, consumed: &c)
+		return self.storage.current.valueData
 	}
 }
 //TODO: private

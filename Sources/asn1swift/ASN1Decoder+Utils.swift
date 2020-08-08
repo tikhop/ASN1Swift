@@ -7,29 +7,6 @@
 
 import Foundation
 
-func extractTLSize(from data: Data, with expectedTags: [ASN1Tag]) -> Int
-{
-	return data.withUnsafeBytes { (p: UnsafeRawBufferPointer) in
-		
-		var ptr = p.baseAddress!.assumingMemoryBound(to: UInt8.self)
-		let size = data.count
-		var tlvTag: ASN1Tag  = 0
-		let tlvConstr: Bool = tlvConstructed(tag: ptr[0])
-		var tlvLen: Int = 0 // Lenght of inner value
-		var r: Int = 0
-		
-		for tag in expectedTags
-		{
-			let tagLen = fetchTag(from: ptr, size: size, to: &tlvTag)
-			let lenOfLen = fetchLength(from: ptr + 1, size: size - 1, isConstructed: tlvConstr, rLen: &tlvLen)
-			ptr += tagLen + lenOfLen
-			r += tagLen + lenOfLen
-		}
-		
-		return r
-	}
-}
-
 func extractTLLength(from dataPtr: UnsafePointer<UInt8>, length: Int, expectedTags: [ASN1Tag]) -> Int
 {
 	var ptr = dataPtr
@@ -47,35 +24,6 @@ func extractTLLength(from dataPtr: UnsafePointer<UInt8>, length: Int, expectedTa
 	}
 	
 	return r
-}
-
-
-func extractValue(from data: Data, with expectedTags: [ASN1Tag], consumed: inout Int) throws -> Data
-{
-	return try data.withUnsafeBytes { (p: UnsafeRawBufferPointer) in
-		
-		let pp = p.baseAddress!.assumingMemoryBound(to: UInt8.self)
-		
-		var len: Int = 0
-		let cons = try checkTags(from: pp, size: data.count, with: expectedTags, lastTlvLength: &len)
-		consumed = cons + len
-		
-		var innerData: Data = data
-		
-		if len == 0 || cons == data.count
-		{
-			innerData = Data()
-		}else{
-			innerData = innerData.advanced(by: cons)
-			
-			if len != 0
-			{
-				innerData = innerData.prefix(len)
-			}
-		}
-		
-		return innerData
-	}
 }
 
 func extractValue(from dataPtr: UnsafePointer<UInt8>, length: Int, with expectedTags: [ASN1Tag], value: UnsafeMutablePointer<UnsafePointer<UInt8>?>, valueLength: inout Int) throws -> ASN1DecoderConsumedValue
