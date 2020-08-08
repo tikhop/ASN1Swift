@@ -15,7 +15,7 @@ func extractTLLength(from dataPtr: UnsafePointer<UInt8>, length: Int, expectedTa
 	var tlvLen: Int = 0 // Size of inner value
 	var r: Int = 0
 	
-	for tag in expectedTags
+	for _ in expectedTags
 	{
 		let tagLen = fetchTag(from: ptr, size: length, to: &tlvTag)
 		let lenOfLen = fetchLength(from: ptr + 1, size: length - 1, isConstructed: tlvConstr, rLen: &tlvLen)

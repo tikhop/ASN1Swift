@@ -105,12 +105,8 @@ extension _ASN1Decoder
 	
 	func unbox(_ value: ASN1Object, as type: Decimal.Type) throws -> Decimal?
 	{
-		if let decimal = value as? Decimal {
-			return decimal
-		} else {
-			let doubleValue = try self.unbox(value, as: Double.self)!
-			return Decimal(doubleValue)
-		}
+		assertionFailure("Not yet implemented")
+		return nil
 	}
 	
 	func unbox<T : Decodable>(_ value: ASN1Object, as type: T.Type) throws -> T?

@@ -97,7 +97,7 @@ final class ASN1SwiftTLVTests: XCTestCase
 			let pp = p.baseAddress!.assumingMemoryBound(to: UInt8.self)
 			
 			var r: ASN1Tag = 0
-			let consumed = try! fetchTag(from: pp, size: bytes.count, to: &r)
+			let consumed = fetchTag(from: pp, size: bytes.count, to: &r)
 			
 			XCTAssert(r == ASN1Identifier.Tag.integer)
 			XCTAssert(consumed == bytes.count)
@@ -113,7 +113,7 @@ final class ASN1SwiftTLVTests: XCTestCase
 			let pp = p.baseAddress!.assumingMemoryBound(to: UInt8.self)
 			
 			var r: ASN1Tag = 0
-			let consumed = try! fetchTag(from: pp, size: bytes.count, to: &r)
+			let consumed = fetchTag(from: pp, size: bytes.count, to: &r)
 			
 			XCTAssert(r == 8)
 			XCTAssert(consumed == 2)

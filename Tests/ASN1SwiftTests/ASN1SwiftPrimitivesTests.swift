@@ -15,8 +15,7 @@ final class ASN1SwiftPrimitivesTests: XCTestCase
 		let bytes: [UInt8] = [0x05, 0x00]
 		
 		let asn1Decoder = ASN1Decoder()
-		let r = try! asn1Decoder.decode(ASN1Null.self, from: Data(bytes))
-		XCTAssert(r is ASN1Null)
+		let _ = try! asn1Decoder.decode(ASN1Null.self, from: Data(bytes))
 	}
 	
 	func testDecoding_oid() throws
