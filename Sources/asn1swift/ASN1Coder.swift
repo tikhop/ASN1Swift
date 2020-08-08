@@ -18,5 +18,12 @@ public protocol ASN1Decodable: Decodable
 public protocol ASN1CodingKey: CodingKey
 {
 	var template: ASN1Template { get }
+	
+	var hashValue: Int { get }
+}
+
+extension ASN1CodingKey
+{
+	var hashValue: Int { return self.intValue ?? self.stringValue.hash }
 }
 

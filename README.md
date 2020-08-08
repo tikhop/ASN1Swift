@@ -83,20 +83,20 @@ struct Receipt: ASN1Decodable
 
 	enum CodingKeys: ASN1CodingKey
 	{
-		case oid
+        case oid
 		case signedData
 
-		var template: ASN1Template
-		{
-			switch self
-			{
-				case .oid:
-					return .universal(ASN1Identifier.Tag.objectIdentifier)
+        var template: ASN1Template
+        {
+            switch self
+            {
+                case .oid:
+                    return .universal(ASN1Identifier.Tag.objectIdentifier)
 				case .signedData:
-					return SignedData.template
-			}
-		}
-	}
+                    return SignedData.template
+            }
+        }
+    }
 }
 
 ....

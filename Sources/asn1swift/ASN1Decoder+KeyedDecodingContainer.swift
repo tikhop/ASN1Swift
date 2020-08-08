@@ -20,6 +20,7 @@ internal struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContain
 	
 	/// A reference to the container we're reading from.
 	private let container: ASN1Object
+	private(set) var innerCache: Cache
 	
 	private let state: _ASN1Decoder.State
 	
@@ -38,11 +39,13 @@ internal struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContain
 		self.container = container
 		
 		self.state = _ASN1Decoder.State(obj: container)
+		self.innerCache = Cache()
 	}
 	
 	// MARK: - KeyedDecodingContainerProtocol Methods
 	
-	public var allKeys: [Key] {
+	public var allKeys: [Key]
+	{
 		return []
 	}
 	
@@ -203,8 +206,13 @@ internal struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContain
 			throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "key is not ASN1CodingKey"))
 		}
 
+		if let obj = innerCache.object(for: k.hashValue)
+		{
+			return obj
+		}
 		
 		let obj = try ASN1Serialization.ASN1Object(with: self.state.dataPtr, length: self.state.left, using: k.template)
+		innerCache.cache(object: obj, for: k.hashValue)
 		
 		// Shift data (position)
 		self.state.advance(obj.dataLength)
@@ -243,5 +251,23 @@ internal struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContain
 	public func superDecoder(forKey key: Key) throws -> Decoder
 	{
 		return try _superDecoder(forKey: key)
+	}
+}
+
+extension ASN1KeyedDecodingContainer
+{
+	class Cache
+	{
+		var storage: [Int: ASN1Object] = [:]
+		
+		func cache(object: ASN1Object, for key: Int)
+		{
+			storage[key] = object
+		}
+		
+		func object(for key: Int) -> ASN1Object?
+		{
+			return storage[key]
+		}
 	}
 }

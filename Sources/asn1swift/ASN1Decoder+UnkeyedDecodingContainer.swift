@@ -24,7 +24,8 @@ internal struct ASN1UnkeyedDecodingContainer: ASN1UnkeyedDecodingContainerProtoc
 	public var codingPath: [CodingKey]
 	
 	/// The index of the element we're about to decode.
-	public var currentIndex: Int
+	private(set) public var currentIndex: Int
+	
 	
 	/// Raw data
 	var rawData: Data { return container.rawData }
@@ -173,7 +174,7 @@ internal struct ASN1UnkeyedDecodingContainer: ASN1UnkeyedDecodingContainerProtoc
 		return value
 	}
 	
-	fileprivate func objToUnbox<T: Decodable>(_ type: T.Type) throws -> ASN1Object
+	fileprivate mutating func objToUnbox<T: Decodable>(_ type: T.Type) throws -> ASN1Object
 	{
 		guard let t = type as? ASN1Decodable.Type else
 		{
@@ -183,6 +184,7 @@ internal struct ASN1UnkeyedDecodingContainer: ASN1UnkeyedDecodingContainerProtoc
 		let obj = try ASN1Serialization.ASN1Object(with: self.state.dataPtr, length: self.state.left, using: t.template)
 		// Shift data (position)
 		self.state.advance(obj.dataLength)
+		self.currentIndex += 1
 		
 		return obj
 	}
