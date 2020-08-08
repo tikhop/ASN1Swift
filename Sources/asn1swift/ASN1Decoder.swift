@@ -37,7 +37,7 @@ open class ASN1Decoder
 		return try data.withUnsafeBytes { (p) throws -> T in
 			
 			let ptr: UnsafePointer<UInt8> = p.baseAddress!.assumingMemoryBound(to: UInt8.self)
-			let top = try ASN1Serialization.ASN1Object(with: ptr, length: data.count, using: t)
+			let top = try ASN1Object.initialize(with: ptr, length: data.count, using: t)
 			
 			let opt = EncodingOptions()
 			let decoder = _ASN1Decoder(referencing: top, options: opt)

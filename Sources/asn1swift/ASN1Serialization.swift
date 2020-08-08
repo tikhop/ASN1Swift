@@ -8,67 +8,10 @@
 import Foundation
 
 
-class ASN1Object
-{
-	var valueData: Data { Data(pointer: valuePtr, size: valueLength) }
-	var rawData: Data { Data(pointer: dataPtr, size: dataLength) }
-	var template: ASN1Template
-	
-	var dataPtr: UnsafePointer<UInt8>
-	var dataLength: Int
-	
-	var valuePtr: UnsafePointer<UInt8> { return dataPtr + valuePosition }
-	var valueLength: Int
-	private var valuePosition: Int
-	
-	init(data: UnsafePointer<UInt8>, dataLength: Int, valuePosition: Int, valueLength: Int, template: ASN1Template)
-	{
-		self.dataPtr = data
-		self.dataLength = dataLength
-		self.valuePosition = valuePosition
-		self.valueLength = valueLength
-		self.template = template
-	}
-}
+
 
 struct ASN1Deserializer
 {
-//	static func parse(input: Data, using template: ASN1Template) throws -> ASN1Object
-//	{
-//		let buffer: UnsafeMutableBufferPointer<UInt8> = UnsafeMutableBufferPointer.allocate(capacity: input.count)
-//		let r = input.copyBytes(to: buffer)
-//		
-//		let ptr = buffer.baseAddress!
-//		var v: UnsafePointer<UInt8>!
-//		var vLength: Int = 0
-//		let c = try extractValue(from: ptr, length: r, with: template.expectedTags, value: &v, valueLength: &vLength)
-//		
-//		return ASN1Object(buffer: UnsafeBufferPointer(buffer), valuePosition: c, valueLength: vLength, template: template)
-//	}
-}
-
-class ASN1Serialization
-{
-//	class func ASN1Object(with data: Data, using template: ASN1Template) throws -> ASN1Object
-//	{
-//		return try ASN1Deserializer.parse(input: data, using: template)
-//	}
-//	
-	class func ASN1Object(with data: UnsafePointer<UInt8>, length: Int, using template: ASN1Template) throws -> ASN1Object
-	{
-		let ptr = data
-		var v: UnsafePointer<UInt8>!
-		var vLength: Int = 0
-		let c = try extractValue(from: ptr, length: length, with: template.expectedTags, value: &v, valueLength: &vLength)
-		
-		return ASN1Swift.ASN1Object(data: data, dataLength: c + vLength, valuePosition: c, valueLength: vLength, template: template)
-	}
-	
-	static func readInt(from obj: ASN1Object) -> Int
-	{
-		return readInt(from: obj.valueData)
-	}
-	
 	@inlinable
 	@inline(__always)
 	static func readInt(from data: Data) -> Int
@@ -90,11 +33,6 @@ class ASN1Serialization
 		}
 		
 		return Int(r)
-	}
-	
-	static func readString(from data: ASN1Object, encoding: String.Encoding) -> String?
-	{
-		return readString(from: data.valueData, encoding: encoding)
 	}
 	
 	static func readString(from data: Data, encoding: String.Encoding) -> String?
@@ -144,4 +82,22 @@ class ASN1Serialization
 		
 		return oid.map { String($0) }.joined(separator: ".")
 	}
+}
+
+class ASN1Serialization
+{
+	static func readInt(from obj: ASN1Object) -> Int
+	{
+		return ASN1Deserializer.readInt(from: obj.valueData)
+	}
+	
+	
+	static func readString(from data: ASN1Object, encoding: String.Encoding) -> String?
+	{
+		return ASN1Deserializer.readString(from: data.valueData, encoding: encoding)
+	}
+	
+	
+	
+	
 }

@@ -103,7 +103,7 @@ extension _ASN1Decoder: SingleValueDecodingContainer
 	
 	public func decode<T : Decodable>(_ type: T.Type) throws -> T
 	{
-		let obj = try ASN1Serialization.ASN1Object(with: self.storage.current.valuePtr, length: self.storage.current.valueLength, using: self.storage.current.template)
+		let obj = try ASN1Object.initialize(with: self.storage.current.valuePtr, length: self.storage.current.valueLength, using: self.storage.current.template)
 		return try self.unbox(obj, as: type)!
 	}
 }

@@ -181,7 +181,7 @@ internal struct ASN1UnkeyedDecodingContainer: ASN1UnkeyedDecodingContainerProtoc
 			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: ""))
 		}
 		
-		let obj = try ASN1Serialization.ASN1Object(with: self.state.dataPtr, length: self.state.left, using: t.template)
+		let obj = try ASN1Object.initialize(with: self.state.dataPtr, length: self.state.left, using: t.template)
 		// Shift data (position)
 		self.state.advance(obj.dataLength)
 		self.currentIndex += 1

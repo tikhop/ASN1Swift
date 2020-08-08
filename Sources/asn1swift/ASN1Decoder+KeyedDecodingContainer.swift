@@ -211,7 +211,7 @@ internal struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContain
 			return obj
 		}
 		
-		let obj = try ASN1Serialization.ASN1Object(with: self.state.dataPtr, length: self.state.left, using: k.template)
+		let obj = try ASN1Object.initialize(with: self.state.dataPtr, length: self.state.left, using: k.template)
 		innerCache.cache(object: obj, for: k.hashValue)
 		
 		// Shift data (position)

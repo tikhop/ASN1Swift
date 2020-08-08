@@ -7,6 +7,41 @@
 
 import Foundation
 
+class ASN1Object
+{
+	var valueData: Data { Data(pointer: valuePtr, size: valueLength) }
+	var rawData: Data { Data(pointer: dataPtr, size: dataLength) }
+	var template: ASN1Template
+	
+	var dataPtr: UnsafePointer<UInt8>
+	var dataLength: Int
+	
+	var valuePtr: UnsafePointer<UInt8> { return dataPtr + valuePosition }
+	var valueLength: Int
+	private var valuePosition: Int
+	
+	init(data: UnsafePointer<UInt8>, dataLength: Int, valuePosition: Int, valueLength: Int, template: ASN1Template)
+	{
+		self.dataPtr = data
+		self.dataLength = dataLength
+		self.valuePosition = valuePosition
+		self.valueLength = valueLength
+		self.template = template
+	}
+}
+
+extension ASN1Object
+{
+	class func initialize(with data: UnsafePointer<UInt8>, length: Int, using template: ASN1Template) throws -> ASN1Object
+	{
+		let ptr = data
+		var v: UnsafePointer<UInt8>!
+		var vLength: Int = 0
+		let c = try extractValue(from: ptr, length: length, with: template.expectedTags, value: &v, valueLength: &vLength)
+		
+		return ASN1Swift.ASN1Object(data: data, dataLength: c + vLength, valuePosition: c, valueLength: vLength, template: template)
+	}
+}
 
 public typealias ASN1Tag = UInt8
 public typealias ASN1SkippedField = Data
