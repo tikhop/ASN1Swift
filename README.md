@@ -2,13 +2,11 @@
 <img height="170" src="https://github.com/tikhop/ASN1Swift/blob/master/www/logo.png" />
 </p>
 
-# ASN1Swift
-
 [![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
 [![CocoaPods Compatible](https://img.shields.io/cocoapods/v/ASN1Swift.svg)](https://cocoapods.org/pods/ASN1Swift)
 [![Swift Package Manager compatible](https://img.shields.io/badge/Swift%20Package%20Manager-compatible-brightgreen.svg)](https://github.com/apple/swift-package-manager)
 [![Platform](https://img.shields.io/cocoapods/p/ASN1Swift.svg?style=flat)]()
-[![GitHub license](https://img.shields.io/badge/license-BSD-3-Clause-blue.svg)](https://raw.githubusercontent.com/tikhop/TPInAppReceipt/master/LICENSE)
+[![GitHub license](https://img.shields.io/badge/license-BSD-3-Clause-blue.svg)](https://raw.githubusercontent.com/tikhop/ASN1Swift/master/LICENSE)
 
 ASN.1 Decoder written in swift. 
 
