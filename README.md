@@ -1,5 +1,5 @@
 <p align="center">
-<img height="160" src="https://github.com/tikhop/ASN1Swift/blob/master/www/logo.png" />
+<img height="170" src="https://github.com/tikhop/ASN1Swift/blob/master/www/logo.png" />
 </p>
 
 # ASN1Swift
