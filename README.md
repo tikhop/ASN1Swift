@@ -1,4 +1,4 @@
-<p align="center">
+<p align="left">
 <img height="170" src="https://github.com/tikhop/ASN1Swift/blob/master/www/logo.png" />
 </p>
 
