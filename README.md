@@ -110,6 +110,16 @@ struct Receipt: ASN1Decodable
 ....
 ``` 
 
+## Benchmarks
+
+Library                                                        | Decoding Time
+-------------------------------------------------------------- | ------------------
+ASN1Swift                                                      | 0.154 seconds 
+[filom/ASN1Decoder](https://github.com/filom/ASN1Decoder)      | 1.032 seconds
+[asn1c](https://github.com/vlm/asn1c)			       | ???
+[mrdepth/ASN1Decoder](https://github.com/mrdepth/ASN1Decoder)  | ???
+
+
 ## License
 
 ASN1Swift is released under a BSD-3-Clause. See [LICENSE](https://github.com/tikhop/ASN1Swift/blob/master/LICENSE) for more information.
