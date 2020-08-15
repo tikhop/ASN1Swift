@@ -47,7 +47,7 @@ public typealias ASN1Tag = UInt8
 
 public struct ASN1SkippedField: ASN1Decodable
 {
-	var rawData: Data
+	public var rawData: Data
 	
 	public static var template: ASN1Template { ASN1Template.universal(0) }
 }
