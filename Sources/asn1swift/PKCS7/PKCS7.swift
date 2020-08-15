@@ -240,14 +240,14 @@ public extension PKCS7Container
 	
 	struct TPSCertificate: ASN1Decodable
 	{
-		var version: Int
-		var serialNumber: Int
-		var signature: ASN1SkippedField
-		var issuer: ASN1SkippedField
-		var validity: ASN1SkippedField
-		var subject: ASN1SkippedField
-		var subjectPublicKeyInfo: Data // We will need only this field
-		var extensions: ASN1SkippedField
+		public var version: Int
+		public var serialNumber: Int
+		public var signature: ASN1SkippedField
+		public var issuer: ASN1SkippedField
+		public var validity: ASN1SkippedField
+		public var subject: ASN1SkippedField
+		public var subjectPublicKeyInfo: Data // We will need only this field
+		public var extensions: ASN1SkippedField
 		
 		enum CodingKeys: ASN1CodingKey
 		{
