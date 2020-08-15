@@ -51,7 +51,7 @@ public extension OID
 public struct PKCS7Container: ASN1Decodable
 {
 	public var oid: ASN1SkippedField
-	public private(set) var signedData: SignedData
+	public private(set) var signedData: Data
 	
 	enum CodingKeys: ASN1CodingKey
 	{

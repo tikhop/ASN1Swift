@@ -9,7 +9,7 @@ final class ASN1SwiftPKCS7Tests: XCTestCase
 		self.measure {
 			let asn1Decoder = ASN1Decoder()
 			let r = try! asn1Decoder.decode(PKCS7Container.self, from: newReceipt)
-			XCTAssert(r.signedData.version == 1)
+			//XCTAssert(r.signedData.version == 1)
 		}
 		
 		
@@ -36,6 +36,6 @@ final class ASN1SwiftPKCS7Tests: XCTestCase
 			r = try! asn1Decoder.decode(PKCS7Container.self, from: receipt)
 		}
 		
-		XCTAssert(r.signedData.version == 1)
+		//XCTAssert(r.signedData.version == 1)
 	}
 }

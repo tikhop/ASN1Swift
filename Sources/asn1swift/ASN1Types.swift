@@ -44,7 +44,13 @@ extension ASN1Object
 }
 
 public typealias ASN1Tag = UInt8
-public typealias ASN1SkippedField = Data
+
+public struct ASN1SkippedField: ASN1Decodable
+{
+	var rawData: Data
+	
+	public static var template: ASN1Template { ASN1Template.universal(0) }
+}
 
 public struct ASN1Null: ASN1Decodable
 {

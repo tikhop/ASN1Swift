@@ -103,9 +103,9 @@ extension _ASN1Decoder
 		return value.valueData
 	}
 	
-	func unboxSkippedField(_ value: ASN1Object) throws -> Data?
+	func unboxSkippedField(_ value: ASN1Object) throws -> ASN1SkippedField?
 	{
-		return value.rawData
+		return ASN1SkippedField(rawData: value.rawData)
 	}
 	
 	func unbox(_ value: ASN1Object, as type: Decimal.Type) throws -> Decimal?
@@ -119,9 +119,9 @@ extension _ASN1Decoder
 		return try unbox_(value, as: type) as? T
 	}
 	
-	func unbox(_ value: ASN1Object, as type: ASN1SkippedField.Type) -> ASN1SkippedField
+	func unbox(_ value: ASN1Object, as type: ASN1SkippedField.Type) throws -> ASN1SkippedField?
 	{
-		return value.rawData
+		return try unboxSkippedField(value)
 	}
 	
 	func unbox_(_ value: ASN1Object, as type: Decodable.Type) throws -> Any?

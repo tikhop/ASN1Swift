@@ -156,7 +156,7 @@ internal struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContain
 		return value
 	}
 	
-	public func decodeSkippedField(forKey key: Key) throws -> Data
+	public func decodeSkippedField(forKey key: Key) throws -> ASN1SkippedField
 	{
 		self.decoder.codingPath.append(key)
 		defer { self.decoder.codingPath.removeLast() }
@@ -188,15 +188,14 @@ internal struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContain
 	
 	public func decode<T : Decodable>(_ type: T.Type, forKey key: Key) throws -> T
 	{
+		if type == Data.self || type == NSData.self
+		{
+			return try decodeData(forKey: key) as! T
+		}
 		
 		if type == ASN1SkippedField.self
 		{
 			return try decodeSkippedField(forKey: key) as! T
-		}
-		
-		if type == Data.self || type == NSData.self
-		{
-			return try decodeData(forKey: key) as! T
 		}
 		
 		self.decoder.codingPath.append(key)
