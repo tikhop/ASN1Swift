@@ -103,6 +103,11 @@ extension _ASN1Decoder
 		return value.valueData
 	}
 	
+	func unboxSkippedField(_ value: ASN1Object) throws -> Data?
+	{
+		return value.rawData
+	}
+	
 	func unbox(_ value: ASN1Object, as type: Decimal.Type) throws -> Decimal?
 	{
 		assertionFailure("Not yet implemented")
@@ -114,9 +119,19 @@ extension _ASN1Decoder
 		return try unbox_(value, as: type) as? T
 	}
 	
+	func unbox(_ value: ASN1Object, as type: ASN1SkippedField.Type) -> ASN1SkippedField
+	{
+		return value.rawData
+	}
+	
 	func unbox_(_ value: ASN1Object, as type: Decodable.Type) throws -> Any?
 	{
-		if type == Data.self || type == Data.self
+		if type == ASN1SkippedField.self
+		{
+			return try self.unbox(value, as: ASN1SkippedField.self)
+		}
+		
+		if type == Data.self || type == NSData.self
 		{
 			return try self.unbox(value, as: Data.self)
 		}

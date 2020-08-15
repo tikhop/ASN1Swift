@@ -142,7 +142,7 @@ internal struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContain
 		return 0
 	}
 	
-	public func decode(_ type: String.Type, forKey key: Key, stringEncoding: String.Encoding) throws -> String
+	public func decode(_ type: String.Type, forKey key: Key) throws -> String
 	{
 		self.decoder.codingPath.append(key)
 		defer { self.decoder.codingPath.removeLast() }
@@ -156,14 +156,19 @@ internal struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContain
 		return value
 	}
 	
-	public func decode(_ type: String.Type, forKey key: Key) throws -> String
+	public func decodeSkippedField(forKey key: Key) throws -> Data
 	{
-		guard let k = key as? ASN1CodingKey else
+		self.decoder.codingPath.append(key)
+		defer { self.decoder.codingPath.removeLast() }
+		
+		
+		guard let value = try self.decoder.unboxSkippedField(objToUnbox(forKey: key)) else
 		{
-			throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "key is not ASN1CodingKey"))
+			let type = Data.self
+			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Expected \(type) value but found null instead."))
 		}
 		
-		return try decode(String.self, forKey: key, stringEncoding: k.template.stringEncoding)
+		return value
 	}
 	
 	public func decodeData(forKey key: Key) throws -> Data
@@ -183,6 +188,12 @@ internal struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContain
 	
 	public func decode<T : Decodable>(_ type: T.Type, forKey key: Key) throws -> T
 	{
+		
+		if type == ASN1SkippedField.self
+		{
+			return try decodeSkippedField(forKey: key) as! T
+		}
+		
 		if type == Data.self || type == NSData.self
 		{
 			return try decodeData(forKey: key) as! T
@@ -190,6 +201,7 @@ internal struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContain
 		
 		self.decoder.codingPath.append(key)
 		defer { self.decoder.codingPath.removeLast() }
+		
 		
 		guard let value = try self.decoder.unbox(objToUnbox(forKey: key), as: T.self) else
 		{

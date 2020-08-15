@@ -8,7 +8,7 @@
 [![Platform](https://img.shields.io/cocoapods/p/ASN1Swift.svg?style=flat)]()
 [![GitHub license](https://img.shields.io/badge/license-BSD3-blue.svg)](https://raw.githubusercontent.com/tikhop/ASN1Swift/master/LICENSE)
 
-ASN.1 Decoder written in swift. 
+ASN1Swift provides a transparent interface to decode ASN.1 data structures. The ASN.1 Data Structure must be encoded using BER/DER Encoding Rules. To simplify encoding and decoding process ASN1Swift implement Encoder/Decoder protocol provided by swift foundation. In other words it works preciesly the same as JSONEncoder/JSONDecoder. 
 
 Installation
 ------------

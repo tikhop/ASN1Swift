@@ -12,9 +12,77 @@ import Foundation
 public protocol ASN1UnkeyedDecodingContainerProtocol: UnkeyedDecodingContainer
 {
 	var rawData: Data { get }
+	var valueData: Data { get }
+	
+	mutating func decode(_ type: String.Type, template: ASN1Template) throws -> String
+	mutating func decode<T>(_ type: T.Type, template: ASN1Template) throws -> T where T: Decodable
 }
 
-internal struct ASN1UnkeyedDecodingContainer: ASN1UnkeyedDecodingContainerProtocol
+extension ASN1UnkeyedDecodingContainer: ASN1UnkeyedDecodingContainerProtocol
+{
+	/// Raw data
+	var rawData: Data { return container.rawData }
+	var valueData: Data { return container.valueData }
+	
+	mutating func decode(_ type: String.Type, template: ASN1Template) throws -> String
+	{
+		guard !self.isAtEnd else
+		{
+			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Unkeyed container is at end."))
+		}
+		
+		self.decoder.codingPath.append(ASN1Key(index: self.currentIndex))
+		defer { self.decoder.codingPath.removeLast() }
+		
+		let obj = try _objToUnbox(from: template)
+
+		guard let value = try self.decoder.unbox(obj, as: String.self) else
+		{
+			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Expected \(type) value but found null instead."))
+		}
+		
+		return value
+	}
+	
+	mutating func decode(_ type: Int.Type, template: ASN1Template) throws -> Int
+	{
+		guard !self.isAtEnd else
+		{
+			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Unkeyed container is at end."))
+		}
+		
+		self.decoder.codingPath.append(ASN1Key(index: self.currentIndex))
+		defer { self.decoder.codingPath.removeLast() }
+		
+		guard let value = try self.decoder.unbox(_objToUnbox(from: template), as: Int.self) else
+		{
+			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Expected \(type) value but found null instead."))
+		}
+		
+		return value
+		
+	}
+	
+	mutating func decode<T>(_ type: T.Type, template: ASN1Template) throws -> T where T: Decodable
+	{
+		guard !self.isAtEnd else
+		{
+			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Unkeyed container is at end."))
+		}
+		
+		self.decoder.codingPath.append(ASN1Key(index: self.currentIndex))
+		defer { self.decoder.codingPath.removeLast() }
+		
+		guard let value = try self.decoder.unbox(_objToUnbox(from: template), as: T.self) else
+		{
+			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Expected \(type) value but found null instead."))
+		}
+		
+		return value
+	}
+}
+
+internal struct ASN1UnkeyedDecodingContainer
 {
 	private let decoder: _ASN1Decoder
 	private let container: ASN1Object
@@ -25,10 +93,6 @@ internal struct ASN1UnkeyedDecodingContainer: ASN1UnkeyedDecodingContainerProtoc
 	
 	/// The index of the element we're about to decode.
 	private(set) public var currentIndex: Int
-	
-	
-	/// Raw data
-	var rawData: Data { return container.rawData }
 	
 	var count: Int?
 	
@@ -60,7 +124,7 @@ internal struct ASN1UnkeyedDecodingContainer: ASN1UnkeyedDecodingContainerProtoc
 		return false
 	}
 	
-	mutating func decode(_ type: String.Type) throws -> String
+	mutating func decode(_ type: String.Type, using stringEncoding: String.Encoding) throws -> String
 	{
 		guard !self.isAtEnd else
 		{
@@ -70,12 +134,22 @@ internal struct ASN1UnkeyedDecodingContainer: ASN1UnkeyedDecodingContainerProtoc
 		self.decoder.codingPath.append(ASN1Key(index: self.currentIndex))
 		defer { self.decoder.codingPath.removeLast() }
 		
-		guard let value = try self.decoder.unbox(objToUnbox(type), as: String.self) else
+		let obj = try ASN1Object.initialize(with: self.state.dataPtr, length: self.state.left, using: stringEncoding.template)
+		self.state.advance(obj.dataLength)
+		self.currentIndex += 1
+		
+		guard let value = try self.decoder.unbox(obj, as: String.self) else
 		{
 			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Expected \(type) value but found null instead."))
 		}
 		
 		return value
+		
+	}
+	
+	mutating func decode(_ type: String.Type) throws -> String
+	{
+		return try decode(type, using: .utf8)
 
 	}
 	
@@ -165,7 +239,6 @@ internal struct ASN1UnkeyedDecodingContainer: ASN1UnkeyedDecodingContainerProtoc
 		self.decoder.codingPath.append(ASN1Key(index: self.currentIndex))
 		defer { self.decoder.codingPath.removeLast() }
 		
-		
 		guard let value = try self.decoder.unbox(objToUnbox(type), as: T.self) else
 		{
 			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Expected \(type) value but found null instead."))
@@ -181,18 +254,24 @@ internal struct ASN1UnkeyedDecodingContainer: ASN1UnkeyedDecodingContainerProtoc
 			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: ""))
 		}
 		
-		let obj = try ASN1Object.initialize(with: self.state.dataPtr, length: self.state.left, using: t.template)
-		// Shift data (position)
-		self.state.advance(obj.dataLength)
-		self.currentIndex += 1
+		return try _objToUnbox(from: t.template)
+	}
+	
+	fileprivate mutating func _objToUnbox(from template: ASN1Template) throws -> ASN1Object
+	{
+		let obj = try ASN1Object.initialize(with: self.state.dataPtr, length: self.state.left, using: template)
+		
+		defer {
+			// Shift data (position)
+			self.state.advance(obj.dataLength)
+			self.currentIndex += 1
+		}
 		
 		return obj
 	}
 	
 	mutating func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type) throws -> KeyedDecodingContainer<NestedKey> where NestedKey : CodingKey
 	{
-		//TODO
-		assertionFailure("Hasn't implemented yet")
 		let container = try ASN1KeyedDecodingContainer<NestedKey>(referencing: self.decoder, wrapping: self.container)
 		return KeyedDecodingContainer(container)
 	}
