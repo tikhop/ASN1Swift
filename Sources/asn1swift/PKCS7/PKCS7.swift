@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum OID: String
+public enum OID: String
 {
 	/// NIST Algorithm
 	case sha1 = "1.3.14.3.2.26"
@@ -26,7 +26,7 @@ enum OID: String
 	case encryptedData = "1.2.840.113549.1.7.6"
 }
 
-extension OID
+public extension OID
 {
 	@available(iOS 10.0, *)
 	func encryptionAlgorithm() -> SecKeyAlgorithm
@@ -136,8 +136,8 @@ public extension PKCS7Container
 		
 		public struct Item: ASN1Decodable
 		{
-			var algorithm: String
-			var parameters: ASN1Null
+			public var algorithm: String
+			public var parameters: ASN1Null
 			
 			enum CodingKeys: ASN1CodingKey
 			{
@@ -195,11 +195,11 @@ public extension PKCS7Container
 	
 	struct Certificate: ASN1Decodable
 	{
-		var cert: TPSCertificate
-		var signatureAlgorithm: ASN1SkippedField
-		var signatureValue: Data
+		public var cert: TPSCertificate
+		public var signatureAlgorithm: ASN1SkippedField
+		public var signatureValue: Data
 		
-		var rawData: Data
+		public var rawData: Data
 		
 		enum CodingKeys: ASN1CodingKey
 		{
