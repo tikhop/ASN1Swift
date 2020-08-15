@@ -16,6 +16,8 @@ public protocol ASN1UnkeyedDecodingContainerProtocol: UnkeyedDecodingContainer
 	
 	mutating func decode(_ type: String.Type, template: ASN1Template) throws -> String
 	mutating func decode<T>(_ type: T.Type, template: ASN1Template) throws -> T where T: Decodable
+	mutating func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type, for template: ASN1Template) throws -> KeyedDecodingContainer<NestedKey> where NestedKey : CodingKey
+	mutating func nestedUnkeyedContainer(for template: ASN1Template) throws -> UnkeyedDecodingContainer
 }
 
 extension ASN1UnkeyedDecodingContainer: ASN1UnkeyedDecodingContainerProtocol
@@ -79,6 +81,37 @@ extension ASN1UnkeyedDecodingContainer: ASN1UnkeyedDecodingContainerProtocol
 		}
 		
 		return value
+	}
+	
+	mutating func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type, for template: ASN1Template) throws -> KeyedDecodingContainer<NestedKey> where NestedKey : CodingKey
+	{
+		guard !self.isAtEnd else
+		{
+			throw DecodingError.valueNotFound(Any.self, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Unkeyed container is at end."))
+		}
+		
+		self.decoder.codingPath.append(ASN1Key(index: self.currentIndex))
+		defer { self.decoder.codingPath.removeLast() }
+		
+		let obj = try _objToUnbox(from: template)
+		
+		let container = try ASN1KeyedDecodingContainer<NestedKey>(referencing: self.decoder, wrapping: obj)
+		return KeyedDecodingContainer(container)
+	}
+	
+	mutating func nestedUnkeyedContainer(for template: ASN1Template) throws -> UnkeyedDecodingContainer
+	{
+		guard !self.isAtEnd else
+		{
+			throw DecodingError.valueNotFound(Any.self, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Unkeyed container is at end."))
+		}
+		
+		self.decoder.codingPath.append(ASN1Key(index: self.currentIndex))
+		defer { self.decoder.codingPath.removeLast() }
+		
+		let obj = try _objToUnbox(from: template)
+		
+		return try ASN1UnkeyedDecodingContainer(referencing: self.decoder, wrapping: obj)
 	}
 }
 
