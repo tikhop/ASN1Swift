@@ -81,11 +81,11 @@ public extension PKCS7Container
 			return ASN1Template.contextSpecific(0).constructed().explicit(tag: 16).constructed()
 		}
 		
-		var version: Int
-		var alg: DigestAlgorithmIdentifiersContainer
-		var contentInfo: ContentInfo
-		var certificates: CetrificatesContaner
-		var signerInfos: SignerInfos
+		public var version: Int
+		public var alg: DigestAlgorithmIdentifiersContainer
+		public var contentInfo: ContentInfo
+		public var certificates: CetrificatesContaner
+		public var signerInfos: SignerInfos
 		
 		enum CodingKeys: ASN1CodingKey
 		{
@@ -116,7 +116,7 @@ public extension PKCS7Container
 	
 	struct DigestAlgorithmIdentifiersContainer: ASN1Decodable
 	{
-		var items: [Item]
+		public var items: [Item]
 		
 		public init(from decoder: Decoder) throws
 		{
@@ -134,7 +134,7 @@ public extension PKCS7Container
 		
 		public static var template: ASN1Template { ASN1Template.universal(ASN1Identifier.Tag.set).constructed() }
 		
-		struct Item: ASN1Decodable
+		public struct Item: ASN1Decodable
 		{
 			var algorithm: String
 			var parameters: ASN1Null
@@ -156,7 +156,7 @@ public extension PKCS7Container
 				}
 			}
 			
-			static var template: ASN1Template
+			public static var template: ASN1Template
 			{
 				return ASN1Template.universal(ASN1Identifier.Tag.sequence).constructed()
 			}
@@ -171,8 +171,8 @@ public extension PKCS7Container
 			return ASN1Template.universal(ASN1Identifier.Tag.sequence).constructed()
 		}
 		
-		var oid: ASN1SkippedField
-		var payload: ASN1SkippedField
+		public var oid: ASN1SkippedField
+		public var payload: ASN1SkippedField
 		
 		enum CodingKeys: ASN1CodingKey
 		{
@@ -309,7 +309,7 @@ public extension PKCS7Container
 	
 	struct CetrificatesContaner: ASN1Decodable
 	{
-		let certificates: [Certificate]
+		public let certificates: [Certificate]
 		
 		public init(from decoder: Decoder) throws
 		{
@@ -337,11 +337,11 @@ public extension PKCS7Container
 			return ASN1Template.universal(ASN1Identifier.Tag.set).constructed().explicit(tag: ASN1Identifier.Tag.sequence).constructed()
 		}
 		
-		var version: Int
-		var signerIdentifier: ASN1SkippedField
-		var digestAlgorithm: ASN1SkippedField
-		var digestEncryptionAlgorithm: ASN1SkippedField
-		var encryptedDigest: Data
+		public var version: Int
+		public var signerIdentifier: ASN1SkippedField
+		public var digestAlgorithm: ASN1SkippedField
+		public var digestEncryptionAlgorithm: ASN1SkippedField
+		public var encryptedDigest: Data
 		
 		enum CodingKeys: ASN1CodingKey
 		{
