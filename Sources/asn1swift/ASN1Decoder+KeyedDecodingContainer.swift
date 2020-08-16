@@ -98,8 +98,16 @@ internal struct ASN1KeyedDecodingContainer<K : CodingKey> : KeyedDecodingContain
 	
 	public func decode(_ type: Int32.Type, forKey key: Key) throws -> Int32
 	{
-		assertionFailure("Not supposed to be here")
-		return 0
+		self.decoder.codingPath.append(key)
+		defer { self.decoder.codingPath.removeLast() }
+		
+		guard let value = try self.decoder.unbox(objToUnbox(forKey: key), as: Int32.self) else
+		{
+			let type = Data.self
+			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Expected \(type) value but found null instead."))
+		}
+		
+		return value
 	}
 	
 	public func decode(_ type: Int64.Type, forKey key: Key) throws -> Int64 {

@@ -23,6 +23,14 @@ extension Int: ASN1Decodable
 	}
 }
 
+extension Int32: ASN1Decodable
+{
+	public static var template: ASN1Template
+	{
+		return ASN1Template.universal(2)
+	}
+}
+
 extension Data: ASN1Decodable
 {
 	public static var template: ASN1Template

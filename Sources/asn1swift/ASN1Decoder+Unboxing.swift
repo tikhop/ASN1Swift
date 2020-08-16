@@ -35,8 +35,7 @@ extension _ASN1Decoder
 	
 	func unbox(_ value: ASN1Object, as type: Int32.Type) throws -> Int32?
 	{
-		assertionFailure("Not yet implemented")
-		return nil
+		return ASN1Serialization.readInt(from: value) //TODO throw
 	}
 	
 	func unbox(_ value: ASN1Object, as type: Int64.Type) throws -> Int64?

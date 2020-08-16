@@ -44,8 +44,7 @@ extension _ASN1Decoder: SingleValueDecodingContainer
 	
 	public func decode(_ type: Int32.Type) throws -> Int32
 	{
-		assertionFailure("Not supposed to be here")
-		return 0
+		return try self.unbox(self.storage.current, as: Int32.self)!
 	}
 	
 	public func decode(_ type: Int64.Type) throws -> Int64

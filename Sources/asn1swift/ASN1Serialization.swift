@@ -16,7 +16,7 @@ struct ASN1Deserializer
 	@inline(__always)
 	static func readInt(from data: Data) -> Int
 	{
-		var r: UInt64 = 0
+		var r: Int = 0
 		
 		let start = data.startIndex
 		let end = start + data.endIndex
@@ -24,7 +24,7 @@ struct ASN1Deserializer
 		for i in start..<end
 		{
 			r = r << 8
-			r |= UInt64(data[i])
+			r |= Int(data[i])
 		}
 		
 		if r >= Int.max
@@ -32,7 +32,30 @@ struct ASN1Deserializer
 			return -1 //Invalid data
 		}
 		
-		return Int(r)
+		return r
+	}
+	
+	@inlinable
+	@inline(__always)
+	static func readInt(from data: Data) -> Int32
+	{
+		var r: Int32 = 0
+		
+		let start = data.startIndex
+		let end = start + data.endIndex
+		
+		for i in start..<end
+		{
+			r = r << 8
+			r |= Int32(data[i])
+		}
+		
+		if r >= Int32.max
+		{
+			return -1 //Invalid data
+		}
+		
+		return r
 	}
 	
 	static func readString(from data: Data, encoding: String.Encoding) -> String?
@@ -91,6 +114,10 @@ class ASN1Serialization
 		return ASN1Deserializer.readInt(from: obj.valueData)
 	}
 	
+	static func readInt(from obj: ASN1Object) -> Int32
+	{
+		return ASN1Deserializer.readInt(from: obj.valueData)
+	}
 	
 	static func readString(from data: ASN1Object, encoding: String.Encoding) -> String?
 	{

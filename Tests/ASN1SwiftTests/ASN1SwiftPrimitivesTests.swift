@@ -92,6 +92,15 @@ final class ASN1SwiftPrimitivesTests: XCTestCase
 		XCTAssert(integer == 0xa0)
 	}
 	
+	func testDecoding_integer32() throws
+	{
+		let bytes: [UInt8] = [0x02, 0x02, 0x06, 0xa6];
+		
+		let asn1Decoder = ASN1Decoder()
+		let integer = try! asn1Decoder.decode(Int32.self, from: Data(bytes))
+		
+		XCTAssert(integer == 1702)
+	}
 	func testDecoding_integer() throws
 	{
 		let bytes: [UInt8] = [0x02, 0x01, 0xa0];

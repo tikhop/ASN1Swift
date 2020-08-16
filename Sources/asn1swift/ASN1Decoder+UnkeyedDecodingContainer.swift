@@ -243,7 +243,20 @@ internal struct ASN1UnkeyedDecodingContainer
 	
 	mutating func decode(_ type: Int32.Type) throws -> Int32
 	{
-		return try Int32(decode(Int.self))
+		guard !self.isAtEnd else
+		{
+			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Unkeyed container is at end."))
+		}
+		
+		self.decoder.codingPath.append(ASN1Key(index: self.currentIndex))
+		defer { self.decoder.codingPath.removeLast() }
+		
+		guard let value = try self.decoder.unbox(objToUnbox(type), as: Int32.self) else
+		{
+			throw DecodingError.valueNotFound(type, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Expected \(type) value but found null instead."))
+		}
+		
+		return value
 	}
 	
 	mutating func decode(_ type: Int64.Type) throws -> Int64

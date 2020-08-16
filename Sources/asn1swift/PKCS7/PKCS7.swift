@@ -81,7 +81,7 @@ public extension PKCS7Container
 			return ASN1Template.contextSpecific(0).constructed().explicit(tag: 16).constructed()
 		}
 		
-		public var version: Int
+		public var version: Int32
 		public var alg: DigestAlgorithmIdentifiersContainer
 		public var contentInfo: ContentInfo
 		public var certificates: CetrificatesContaner
