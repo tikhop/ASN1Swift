@@ -18,6 +18,8 @@ public protocol ASN1UnkeyedDecodingContainerProtocol: UnkeyedDecodingContainer
 	mutating func decode<T>(_ type: T.Type, template: ASN1Template) throws -> T where T: Decodable
 	mutating func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type, for template: ASN1Template) throws -> KeyedDecodingContainer<NestedKey> where NestedKey : CodingKey
 	mutating func nestedUnkeyedContainer(for template: ASN1Template) throws -> UnkeyedDecodingContainer
+	
+	mutating func skip(template: ASN1Template) throws
 }
 
 extension ASN1UnkeyedDecodingContainer: ASN1UnkeyedDecodingContainerProtocol
@@ -112,6 +114,18 @@ extension ASN1UnkeyedDecodingContainer: ASN1UnkeyedDecodingContainerProtocol
 		let obj = try _objToUnbox(from: template)
 		
 		return try ASN1UnkeyedDecodingContainer(referencing: self.decoder, wrapping: obj)
+	}
+	
+	mutating func skip(template: ASN1Template) throws
+	{
+		guard !self.isAtEnd else
+		{
+			throw DecodingError.valueNotFound(Any.self, DecodingError.Context(codingPath: self.decoder.codingPath, debugDescription: "Unkeyed container is at end."))
+		}
+		
+		let bytesToSkip = try consume(from: self.state.dataPtr, length: self.state.left, expectedTags: template.expectedTags)
+		self.state.advance(bytesToSkip)
+		self.currentIndex += 1
 	}
 }
 

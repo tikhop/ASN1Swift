@@ -7,6 +7,14 @@
 
 import Foundation
 
+func consume(from dataPtr: UnsafePointer<UInt8>, length: Int, expectedTags: [ASN1Tag]) throws -> Int
+{
+	var len: Int = 0
+	let cons = try checkTags(from: dataPtr, size: length, with: expectedTags, lastTlvLength: &len)
+	
+	return cons + len
+}
+
 func extractTLLength(from dataPtr: UnsafePointer<UInt8>, length: Int, expectedTags: [ASN1Tag]) -> Int
 {
 	var ptr = dataPtr

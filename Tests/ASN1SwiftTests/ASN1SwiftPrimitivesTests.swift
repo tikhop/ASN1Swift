@@ -10,6 +10,15 @@ import XCTest
 
 final class ASN1SwiftPrimitivesTests: XCTestCase
 {
+	func testDecoding_DataFromOctetString() throws
+	{
+		let bytes: [UInt8] = [0x04, 0x18, 0x34, 0x30, 0x30, 0x31, 0x2D, 0x30, 0x31, 0x2D, 0x30, 0x31, 0x54, 0x30, 0x30, 0x3A, 0x30, 0x30, 0x3A, 0x30, 0x30, 0x2B, 0x30, 0x30, 0x30, 0x30]
+		
+		let asn1Decoder = ASN1Decoder()
+		let r = try! asn1Decoder.decode(Data.self, from: Data(bytes), template: ASN1Template.universal(ASN1Identifier.Tag.octetString))
+		print(r)
+	}
+	
 	func testDecoding_null() throws
 	{
 		let bytes: [UInt8] = [0x05, 0x00]
