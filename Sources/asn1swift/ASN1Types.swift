@@ -7,7 +7,7 @@
 
 import Foundation
 
-class ASN1Object
+struct ASN1Object
 {
 	var valueData: Data { Data(pointer: valuePtr, size: valueLength) }
 	var rawData: Data { Data(pointer: dataPtr, size: dataLength) }
@@ -32,7 +32,7 @@ class ASN1Object
 
 extension ASN1Object
 {
-	class func initialize(with data: UnsafePointer<UInt8>, length: Int, using template: ASN1Template) throws -> ASN1Object
+	static func initialize(with data: UnsafePointer<UInt8>, length: Int, using template: ASN1Template) throws -> ASN1Object
 	{
 		let ptr = data
 		var v: UnsafePointer<UInt8>!
