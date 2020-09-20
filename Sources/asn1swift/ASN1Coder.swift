@@ -24,6 +24,15 @@ public protocol ASN1CodingKey: CodingKey
 
 extension ASN1CodingKey
 {
-	var hashValue: Int { return self.intValue ?? self.stringValue.hash }
+	func hash(into hasher: inout Hasher)
+	{
+		if let v = self.intValue
+		{
+			hasher.combine(v)
+		}else{
+			hasher.combine(self.stringValue)
+		}
+		
+	}
 }
 
