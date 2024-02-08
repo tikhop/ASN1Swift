@@ -117,7 +117,7 @@ public struct ASN1Identifier
 		public static let objectIdentifier: ASN1Tag = 0x06
 		public static let objectDescriptor: ASN1Tag = 0x07
 		public static let external: ASN1Tag = 0x08
-		public static let read: ASN1Tag = 0x09
+		public static let real: ASN1Tag = 0x09
 		public static let enumerated: ASN1Tag = 0x0A
 		public static let embeddedPdv: ASN1Tag = 0x0B
 		public static let utf8String: ASN1Tag = 0x0C
