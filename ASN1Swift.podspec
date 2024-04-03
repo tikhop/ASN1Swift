@@ -1,7 +1,7 @@
 Pod::Spec.new do |s|
 
 s.name         = "ASN1Swift"
-s.version      = "1.2.5"
+s.version      = "1.2.6"
 s.summary      = "Decoding ASN.1 in swift"
 s.description  = "A lightweight swift library for decoding ASN.1 structure. Similar to `JSONDecoder`"
 
@@ -22,5 +22,5 @@ s.watchos.deployment_target = '6.0'
 s.requires_arc = true
 
 s.source_files  = "Sources/ASN1Swift/*.{swift}", "Sources/ASN1Swift/PKCS7/*.{swift}"
-
+s.resources  = "Sources/ASN1Swift/PrivacyInfo.xcprivacy"
 end

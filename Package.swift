@@ -20,7 +20,8 @@ let package = Package(
     targets: [
         .target(
             name: "ASN1Swift",
-            dependencies: []),
+            dependencies: [],
+            resources: [.process("PrivacyInfo.xcprivacy")]),
         .testTarget(
             name: "ASN1SwiftTests",
             dependencies: ["ASN1Swift"]),
